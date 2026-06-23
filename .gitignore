@@ -1,0 +1,5 @@
+# 嚴禁推上 GitHub：明碼資料絕對不能進 repo
+data/data.json
+*.tmp
+.DS_Store
+Thumbs.db
