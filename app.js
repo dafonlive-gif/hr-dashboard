@@ -79,13 +79,17 @@ async function tryLogin(event) {
 
 async function loadReferral() {
   try {
-    // 優先用 ATS API 自動產生的版本；失敗 fallback 到手動 JSON
-    let r = await fetch('/external-data/recruitment_referral_stats.json', { cache: 'no-store' });
-    if (!r.ok) {
-      r = await fetch('/external-data/manual/referral_stats.json', { cache: 'no-store' });
-      if (!r.ok) throw new Error('找不到 referral_stats.json');
+    // 優先用 data.json 內嵌（GitHub Pages 路線）；失敗 fallback dev_server /external-data/
+    if (DATA?.recruitment_effectiveness?.referral) {
+      REFERRAL_DATA = DATA.recruitment_effectiveness.referral;
+    } else {
+      let r = await fetch('/external-data/recruitment_referral_stats.json', { cache: 'no-store' });
+      if (!r.ok) {
+        r = await fetch('/external-data/manual/referral_stats.json', { cache: 'no-store' });
+        if (!r.ok) throw new Error('找不到 referral_stats.json');
+      }
+      REFERRAL_DATA = await r.json();
     }
-    REFERRAL_DATA = await r.json();
     renderReferralSection();
     renderChannelOverview();
   } catch (e) {
@@ -95,17 +99,21 @@ async function loadReferral() {
 
 async function loadFunnel() {
   try {
-    const r = await fetch('/external-data/recruitment_funnel.json', { cache: 'default' });
-    if (!r.ok) {
-      // 同目錄 fallback（若部署環境把 funnel.json 放到 web/data 下）
-      const r2 = await fetch('data/recruitment_funnel.json', { cache: 'default' });
-      if (!r2.ok) throw new Error('找不到 recruitment_funnel.json');
-      FUNNEL_DATA = await r2.json();
+    // 優先用 data.json 內嵌（GitHub Pages 路線）；失敗 fallback dev_server /external-data/
+    if (DATA?.recruitment_effectiveness?.funnel) {
+      FUNNEL_DATA = DATA.recruitment_effectiveness.funnel;
     } else {
-      FUNNEL_DATA = await r.json();
+      const r = await fetch('/external-data/recruitment_funnel.json', { cache: 'default' });
+      if (!r.ok) {
+        const r2 = await fetch('data/recruitment_funnel.json', { cache: 'default' });
+        if (!r2.ok) throw new Error('找不到 recruitment_funnel.json');
+        FUNNEL_DATA = await r2.json();
+      } else {
+        FUNNEL_DATA = await r.json();
+      }
     }
     renderFunnelSection();
-    renderChannelOverview();  // FUNNEL_DATA 載入後重渲綜合評估，補上 FB
+    renderChannelOverview();
   } catch (e) {
     console.warn('[funnel] 載入失敗：', e.message);
   }
