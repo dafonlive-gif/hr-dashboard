@@ -2457,6 +2457,20 @@ function renderChannelOverview() {
   const monthFrom = (document.getElementById('filter-month-from') || {}).value || (DATA?.meta?.year ? `${DATA.meta.year}-01` : '2026-01');
   const monthTo   = (document.getElementById('filter-month-to')   || {}).value || (DATA?.meta?.year ? `${DATA.meta.year}-12` : '2026-12');
 
+  // 偵測 FB 資料是否異常（token 過期等）— 整段期間 leads + spend = 0 表示異常
+  const fbBM = FUNNEL_DATA?.by_month || [];
+  const fbAllZero = fbBM.length > 0
+    && fbBM.every(m => (m.leads || 0) === 0 && (m.spend || 0) === 0);
+  // 在區塊上方插入或移除警示
+  const ovNote = document.getElementById('ov-note');
+  if (ovNote) {
+    if (fbAllZero) {
+      ovNote.innerHTML = '<span class="text-amber-700">⚠ FB 廣告資料暫時無法取得（疑似 Meta API token 失效，等行銷團隊更新後自動補上）</span>';
+    } else {
+      ovNote.textContent = '';
+    }
+  }
+
   // 各管道資料蒐集
   const channels = [];
 
