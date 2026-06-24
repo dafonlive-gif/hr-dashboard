@@ -2079,6 +2079,91 @@ function renderFunnelSection() {
   renderFunnelCampaigns(view.camps);
   renderFunnelPendingStats(view.pending);
   renderFunnelCrossChannel(d, view);
+  renderFunnelApplicants(d, view);
+}
+
+// FB 應徵者名單（含狀態 / 部門 / 職缺）
+function renderFunnelApplicants(d, view) {
+  const wrap = document.getElementById('fb-apl-table');
+  if (!wrap) return;
+  const all = d.fb_applicants || [];
+  const monthFrom = view.dateFrom ? view.dateFrom.slice(0, 7) : '';
+  const monthTo = view.dateTo ? view.dateTo.slice(0, 7) : '';
+  const dept = view.dept || '';
+  const inRange = (date) => {
+    const m = (date || '').slice(0, 7);
+    return (!monthFrom || m >= monthFrom) && (!monthTo || m <= monthTo);
+  };
+  const deptMatch = (rDept, rUnit) => {
+    if (!dept) return true;
+    return rDept === dept || (rUnit && deptMatchesUnit(dept, rUnit)) || rDept.includes(dept);
+  };
+  let rows = all.filter(r => inRange(r.contactDate) && deptMatch(r.dept, r.unit));
+
+  const statusSel = document.getElementById('fb-apl-status');
+  const searchInp = document.getElementById('fb-apl-search');
+  const statusFilter = statusSel ? statusSel.value : '';
+  const q = (searchInp ? searchInp.value : '').trim().toLowerCase();
+  if (statusFilter) rows = rows.filter(r => r.status === statusFilter);
+  if (q) rows = rows.filter(r =>
+    (r.name || '').toLowerCase().includes(q) ||
+    (r.jobTitle || '').toLowerCase().includes(q) ||
+    (r.dept || '').toLowerCase().includes(q));
+
+  document.getElementById('fb-apl-total').textContent = rows.length;
+
+  // 狀態色彩
+  const statusBadge = (s) => {
+    const map = {
+      '已報到':       'bg-emerald-100 text-emerald-700',
+      '已邀約':       'bg-amber-100 text-amber-700',
+      '已發 offer':   'bg-sky-100 text-sky-700',
+      '謝絕錄取':     'bg-orange-100 text-orange-700',
+      '未通過篩選':   'bg-slate-200 text-slate-700',
+      '已聯繫未成功': 'bg-rose-100 text-rose-700',
+      '尚未聯繫':     'bg-yellow-100 text-yellow-800',
+      '未報到':       'bg-red-100 text-red-700',
+      '待跟進':       'bg-indigo-100 text-indigo-700',
+    };
+    const cls = map[s] || 'bg-slate-100 text-slate-700';
+    return `<span class="px-2 py-0.5 rounded text-[11px] ${cls}">${s}</span>`;
+  };
+
+  const esc = (s) => String(s || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const MAX = 300;
+  const shown = rows.slice(0, MAX);
+  const head = `<thead class="bg-slate-50 sticky top-0">
+    <tr class="text-xs text-slate-600">
+      <th class="text-left px-3 py-2">聯絡日期</th>
+      <th class="text-left px-3 py-2">姓名</th>
+      <th class="text-left px-3 py-2">電話</th>
+      <th class="text-left px-3 py-2">部門</th>
+      <th class="text-left px-3 py-2">職缺</th>
+      <th class="text-left px-3 py-2">狀態</th>
+      <th class="text-left px-3 py-2">備註</th>
+    </tr></thead>`;
+  const body = shown.map(r => `<tr class="border-t border-slate-100 text-sm hover:bg-slate-50">
+    <td class="px-3 py-1.5 text-slate-600 whitespace-nowrap">${esc(r.contactDate)}</td>
+    <td class="px-3 py-1.5 font-medium">${esc(r.name)}</td>
+    <td class="px-3 py-1.5 text-slate-500 whitespace-nowrap">${esc(r.phone)}</td>
+    <td class="px-3 py-1.5 text-slate-700 whitespace-nowrap">${esc(r.dept)}</td>
+    <td class="px-3 py-1.5 text-slate-700">${esc(r.jobTitle)}</td>
+    <td class="px-3 py-1.5">${statusBadge(r.status)}</td>
+    <td class="px-3 py-1.5 text-xs text-slate-500 max-w-[260px] truncate" title="${esc(r.phoneScreenNote)}">${esc(r.phoneScreenNote)}</td>
+  </tr>`).join('');
+  const moreMsg = rows.length > MAX ? `<tr><td colspan="7" class="text-center text-xs text-slate-400 py-2">顯示前 ${MAX} 筆 / 共 ${rows.length} 筆，請用搜尋/篩選縮小範圍</td></tr>` : '';
+  wrap.innerHTML = `<table class="min-w-full text-sm">${head}<tbody>${body}${moreMsg}</tbody></table>`;
+
+  // 綁定 filter 事件（只綁一次）
+  if (statusSel && !statusSel._bound) {
+    statusSel.addEventListener('change', () => renderFunnelApplicants(d, computeFunnelView()));
+    statusSel._bound = true;
+  }
+  if (searchInp && !searchInp._bound) {
+    let t;
+    searchInp.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => renderFunnelApplicants(d, computeFunnelView()), 200); });
+    searchInp._bound = true;
+  }
 }
 
 // FB 跨管道轉投：FB lead 後改投 104/1111/website 的人

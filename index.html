@@ -670,6 +670,29 @@
           <h3 class="text-sm font-semibold text-slate-700 mb-3">📋 待跟進統計（備註空白，FB Leads 進 ATS 但尚未確認）</h3>
           <div id="funnel-pending-stats" class="overflow-auto max-h-[320px] border border-slate-100 rounded-lg"></div>
         </div>
+
+        <!-- FB 應徵者名單（含狀態） -->
+        <div class="border-t border-slate-200 pt-4 mt-4">
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h3 class="text-sm font-semibold text-slate-700">👥 FB 應徵者名單（含狀態 / 部門 / 職缺）</h3>
+            <div class="flex items-center gap-2 text-xs flex-wrap">
+              <span class="text-slate-500">共 <span id="fb-apl-total" class="font-semibold text-slate-700">-</span> 人</span>
+              <select id="fb-apl-status" class="border border-slate-300 rounded px-2 py-1">
+                <option value="">全部狀態</option>
+                <option value="已報到">已報到</option>
+                <option value="已邀約">已邀約</option>
+                <option value="已發 offer">已發 offer</option>
+                <option value="謝絕錄取">謝絕錄取</option>
+                <option value="未通過篩選">未通過篩選</option>
+                <option value="已聯繫未成功">已聯繫未成功</option>
+                <option value="尚未聯繫">尚未聯繫</option>
+                <option value="待跟進">待跟進</option>
+              </select>
+              <input id="fb-apl-search" type="search" placeholder="搜尋 姓名/職缺/部門" class="border border-slate-300 rounded px-2 py-1 w-44">
+            </div>
+          </div>
+          <div id="fb-apl-table" class="overflow-auto max-h-[500px] border border-slate-100 rounded-lg"></div>
+        </div>
       </section>
 
       <!-- 人力銀行招募效益（104 + 1111 並列） -->
