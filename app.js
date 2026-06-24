@@ -2621,8 +2621,11 @@ function renderReferralBonusDetails() {
     const exTag = d.exception_note
       ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-fuchsia-100 text-fuchsia-700" title="${esc(d.exception_note)}">特例</span>`
       : '';
+    const manTag = d.manual
+      ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700" title="未走 ATS 系統，HR 手動補登">手動補登</span>`
+      : '';
     return `<tr class="border-t border-slate-100 hover:bg-emerald-50">
-      <td class="px-3 py-1.5 text-sm font-medium">${esc(d.name)}${exTag}</td>
+      <td class="px-3 py-1.5 text-sm font-medium">${esc(d.name)}${manTag}${exTag}</td>
       <td class="px-3 py-1.5 text-sm text-slate-700">${esc(d.jobTitle)}</td>
       <td class="px-3 py-1.5 text-sm text-slate-700">${esc(d.dept)}</td>
       <td class="px-3 py-1.5 text-sm">${esc(d.referrer)}</td>
