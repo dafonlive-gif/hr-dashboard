@@ -2595,14 +2595,16 @@ function renderReferralBonusDetails() {
   const summary = REFERRAL_DATA.bonus_summary || {};
   document.getElementById('ref-bonus-eligible').textContent = summary.eligible_hires ?? '-';
   document.getElementById('ref-bonus-ineligible').textContent = summary.ineligible_hires ?? '-';
-  document.getElementById('ref-bonus-m3').textContent = summary.milestones_3m_reached ?? '-';
-  document.getElementById('ref-bonus-m6').textContent = summary.milestones_6m_reached ?? '-';
+  document.getElementById('ref-bonus-m3').textContent = summary.milestones_3m_paid ?? '-';
+  document.getElementById('ref-bonus-m6').textContent = summary.milestones_6m_paid ?? '-';
 
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const mileBadge = (mile) => {
     if (!mile) return '<span class="text-slate-300">—</span>';
-    if (mile.reached) return `<span class="px-2 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-700">已達 ${mile.date} ($${fmtNum(mile.amount)})</span>`;
-    return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600">${mile.date} 後到期</span>`;
+    if (mile.paid) {
+      return `<span class="px-2 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-700" title="滿月日 ${mile.milestone_date} → ${mile.payday} 發薪日已發">已發 $${fmtNum(mile.amount)}<div class="text-[10px] text-emerald-600">${mile.payday} 發薪</div></span>`;
+    }
+    return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600" title="滿月日 ${mile.milestone_date} → 待 ${mile.payday} 發薪">待 ${mile.payday}<div class="text-[10px] text-slate-400">滿月 ${mile.milestone_date}</div></span>`;
   };
 
   const rows = details.map(d => {
