@@ -603,20 +603,67 @@
           </div>
         </div>
 
-        <!-- FB 跨管道轉投：FB lead 後改投 104/1111/website 的人 (phone 末9碼比中) -->
-        <div id="funnel-cross-channel" class="mb-5 bg-gradient-to-r from-fuchsia-50 to-rose-50 border border-fuchsia-200 rounded-lg p-4 hidden"
-             title="這些人看 FB 廣告後沒直接從 FB 表單投，改去人力銀行 / 官網投履歷。phone 末9碼比中即列入；姓名可能是化名。此數字已併入上方『進 ATS / 已邀約 / 已報到』。">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <div class="text-xs text-fuchsia-700 font-medium">🔄 FB 跨管道轉投人力銀行 <span class="text-slate-400 cursor-help">ⓘ</span></div>
-              <div class="text-2xl font-bold text-fuchsia-700 mt-1"><span id="funnel-cc-total">-</span> 人</div>
-              <div class="text-xs text-fuchsia-600 mt-1">看 FB → 改投 104/1111/官網投履歷（phone 末9碼比中）</div>
+        <!-- FB 影響力總覽：直接轉換 + 跨管道轉投 → 總入職率 -->
+        <div id="funnel-cross-channel" class="mb-5 bg-gradient-to-br from-fuchsia-50 via-rose-50 to-amber-50 border border-fuchsia-200 rounded-lg p-5 hidden">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-fuchsia-800 flex items-center gap-2">
+              🎯 FB 廣告總影響力（直接 + 跨管道）
+              <span class="text-slate-400 cursor-help" title="把『直接從 FB 表單進 ATS』和『看 FB 廣告後改投 104/1111/官網』兩條路徑合計，計算 FB 廣告整體入職貢獻">ⓘ</span>
+            </h3>
+            <span class="text-[10px] text-slate-500">phone 末9碼比中 + 期間 + 部門篩選</span>
+          </div>
+
+          <!-- 兩條路徑漏斗 -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <!-- 直接路徑 -->
+            <div class="bg-white rounded-lg p-3 border border-fuchsia-100">
+              <div class="text-xs font-semibold text-fuchsia-700 mb-2">①直接路徑：FB 表單 → ATS</div>
+              <div class="flex items-center justify-between text-xs">
+                <div class="text-center"><div class="text-slate-500">進 ATS</div><div class="font-bold text-cyan-700 text-lg" id="cc-direct-in-ats">-</div></div>
+                <span class="text-slate-300">→</span>
+                <div class="text-center"><div class="text-slate-500">邀約</div><div class="font-bold text-amber-700 text-lg" id="cc-direct-invited">-</div></div>
+                <span class="text-slate-300">→</span>
+                <div class="text-center"><div class="text-slate-500">報到</div><div class="font-bold text-emerald-700 text-lg" id="cc-direct-hired">-</div></div>
+              </div>
             </div>
-            <div class="text-xs text-slate-700 space-y-0.5">
-              <div>104：<span id="funnel-cc-104" class="font-semibold">-</span> 人</div>
-              <div>1111：<span id="funnel-cc-1111" class="font-semibold">-</span> 人</div>
-              <div>官網：<span id="funnel-cc-website" class="font-semibold">-</span> 人</div>
-              <div class="pt-1 border-t border-fuchsia-200 mt-1">其中邀約 <span id="funnel-cc-invited" class="font-semibold text-amber-700">-</span> / 報到 <span id="funnel-cc-hired" class="font-semibold text-emerald-700">-</span></div>
+            <!-- 跨管道路徑 -->
+            <div class="bg-white rounded-lg p-3 border border-fuchsia-100">
+              <div class="text-xs font-semibold text-fuchsia-700 mb-2">②跨管道路徑：FB → 人力銀行投履歷</div>
+              <div class="flex items-center justify-between text-xs">
+                <div class="text-center"><div class="text-slate-500">轉投</div><div class="font-bold text-fuchsia-700 text-lg" id="cc-cross-total">-</div></div>
+                <span class="text-slate-300">→</span>
+                <div class="text-center"><div class="text-slate-500">邀約</div><div class="font-bold text-amber-700 text-lg" id="cc-cross-invited">-</div></div>
+                <span class="text-slate-300">→</span>
+                <div class="text-center"><div class="text-slate-500">報到</div><div class="font-bold text-emerald-700 text-lg" id="cc-cross-hired">-</div></div>
+              </div>
+              <div class="mt-2 text-[10px] text-slate-500 flex gap-3">
+                <span>104：<b id="cc-cross-104">-</b></span>
+                <span>1111：<b id="cc-cross-1111">-</b></span>
+                <span>官網：<b id="cc-cross-website">-</b></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 總合計與轉換率 -->
+          <div class="bg-white rounded-lg p-3 border border-fuchsia-200">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+              <div>
+                <div class="text-xs text-slate-500">FB 總進 ATS</div>
+                <div class="text-lg font-bold text-cyan-800" id="cc-total-in-ats">-</div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500">FB 總邀約</div>
+                <div class="text-lg font-bold text-amber-800" id="cc-total-invited">-</div>
+              </div>
+              <div>
+                <div class="text-xs text-slate-500">FB 總報到</div>
+                <div class="text-lg font-bold text-emerald-800" id="cc-total-hired">-</div>
+              </div>
+              <div class="border-l border-fuchsia-200 pl-3">
+                <div class="text-xs text-slate-500">FB 整體入職率</div>
+                <div class="text-lg font-bold text-fuchsia-800"><span id="cc-overall-rate">-</span></div>
+                <div class="text-[10px] text-slate-400" id="cc-overall-rate-note">-</div>
+              </div>
             </div>
           </div>
         </div>

@@ -2166,28 +2166,56 @@ function renderFunnelApplicants(d, view) {
   }
 }
 
-// FB 跨管道轉投：FB lead 後改投 104/1111/website 的人
+// FB 廣告總影響力：直接路徑 + 跨管道路徑 + 整體入職率
 function renderFunnelCrossChannel(d, view) {
   const card = document.getElementById('funnel-cross-channel');
   if (!card) return;
   const cc = d.fb_cross_channel;
-  if (!cc || !Array.isArray(cc.by_source_month)) { card.classList.add('hidden'); return; }
   const monthFrom = view.dateFrom ? view.dateFrom.slice(0, 7) : '';
   const monthTo = view.dateTo ? view.dateTo.slice(0, 7) : '';
-  const inRange = (m) => (!monthFrom || m >= monthFrom) && (!monthTo || m <= monthTo);
-  const filtered = cc.by_source_month.filter(x => inRange(x.in_month || ''));
-  const total = filtered.length;
-  if (total === 0) { card.classList.add('hidden'); return; }
-  const cnt = (src) => filtered.filter(x => x.src === src).length;
-  const invited = filtered.filter(x => x.invited).length;
-  const hired = filtered.filter(x => x.hired).length;
-  document.getElementById('funnel-cc-total').textContent = total;
-  document.getElementById('funnel-cc-104').textContent = cnt('104');
-  document.getElementById('funnel-cc-1111').textContent = cnt('1111');
-  document.getElementById('funnel-cc-website').textContent = cnt('website');
-  document.getElementById('funnel-cc-invited').textContent = invited;
-  document.getElementById('funnel-cc-hired').textContent = hired;
+  const inRangeMonth = (m) => (!monthFrom || m >= monthFrom) && (!monthTo || m <= monthTo);
+
+  // ① 直接路徑：FB by_month 扣掉跨管道 = 直接從 FB 表單進 ATS 的部分
+  const bm = (d.by_month || []).filter(m => inRangeMonth(m.month));
+  const allIn = bm.reduce((s, m) => s + (m.in_ats || 0), 0);
+  const allInv = bm.reduce((s, m) => s + (m.invited || 0), 0);
+  const allHi = bm.reduce((s, m) => s + (m.hired || 0), 0);
+
+  // ② 跨管道路徑：fb_cross_channel
+  const crossArr = (cc && cc.by_source_month) ? cc.by_source_month.filter(x => inRangeMonth(x.in_month || '')) : [];
+  const crossTotal = crossArr.length;
+  const crossInvited = crossArr.filter(x => x.invited).length;
+  const crossHired = crossArr.filter(x => x.hired).length;
+  const cnt = (src) => crossArr.filter(x => x.src === src).length;
+
+  // 直接 = 全部 - 跨管道
+  const directIn = Math.max(0, allIn - crossTotal);
+  const directInv = Math.max(0, allInv - crossInvited);
+  const directHi = Math.max(0, allHi - crossHired);
+
+  // 沒任何 FB 資料 → 隱藏整塊
+  if (allIn === 0 && crossTotal === 0) { card.classList.add('hidden'); return; }
   card.classList.remove('hidden');
+
+  // 直接路徑
+  document.getElementById('cc-direct-in-ats').textContent = fmtNum(directIn);
+  document.getElementById('cc-direct-invited').textContent = fmtNum(directInv);
+  document.getElementById('cc-direct-hired').textContent = fmtNum(directHi);
+  // 跨管道路徑
+  document.getElementById('cc-cross-total').textContent = fmtNum(crossTotal);
+  document.getElementById('cc-cross-invited').textContent = fmtNum(crossInvited);
+  document.getElementById('cc-cross-hired').textContent = fmtNum(crossHired);
+  document.getElementById('cc-cross-104').textContent = cnt('104');
+  document.getElementById('cc-cross-1111').textContent = cnt('1111');
+  document.getElementById('cc-cross-website').textContent = cnt('website');
+  // 合計
+  document.getElementById('cc-total-in-ats').textContent = fmtNum(allIn);
+  document.getElementById('cc-total-invited').textContent = fmtNum(allInv);
+  document.getElementById('cc-total-hired').textContent = fmtNum(allHi);
+  // 整體入職率 = 總報到 / 總進 ATS
+  const rate = allIn > 0 ? (allHi / allIn * 100).toFixed(1) + '%' : '—';
+  document.getElementById('cc-overall-rate').textContent = rate;
+  document.getElementById('cc-overall-rate-note').textContent = allIn > 0 ? `${allHi} / ${allIn} 進 ATS` : '—';
 }
 
 function renderFunnelChart(s) {
