@@ -2601,10 +2601,11 @@ function renderReferralBonusDetails() {
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const mileBadge = (mile) => {
     if (!mile) return '<span class="text-slate-300">—</span>';
+    const minguo = mile.salary_month ? `<div class="text-[10px] text-slate-500">獎金月 ${mile.salary_month}</div>` : '';
     if (mile.paid) {
-      return `<span class="px-2 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-700" title="滿月日 ${mile.milestone_date} → ${mile.payday} 發薪日已發">已發 $${fmtNum(mile.amount)}<div class="text-[10px] text-emerald-600">${mile.payday} 發薪</div></span>`;
+      return `<span class="inline-block px-2 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-700" title="滿月日 ${mile.milestone_date} → 薪資月 ${mile.salary_month} → ${mile.payday} 發">已發 $${fmtNum(mile.amount)}<div class="text-[10px] text-emerald-600">${mile.payday} 發</div>${minguo}</span>`;
     }
-    return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600" title="滿月日 ${mile.milestone_date} → 待 ${mile.payday} 發薪">待 ${mile.payday}<div class="text-[10px] text-slate-400">滿月 ${mile.milestone_date}</div></span>`;
+    return `<span class="inline-block px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600" title="滿月日 ${mile.milestone_date} → 薪資月 ${mile.salary_month} → 待 ${mile.payday} 發">待 ${mile.payday}<div class="text-[10px] text-slate-400">滿月 ${mile.milestone_date}</div>${minguo}</span>`;
   };
 
   const rows = details.map(d => {
