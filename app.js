@@ -2618,8 +2618,11 @@ function renderReferralBonusDetails() {
       </tr>`;
     }
     const total = d.paid + d.pending;
+    const exTag = d.exception_note
+      ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-fuchsia-100 text-fuchsia-700" title="${esc(d.exception_note)}">特例</span>`
+      : '';
     return `<tr class="border-t border-slate-100 hover:bg-emerald-50">
-      <td class="px-3 py-1.5 text-sm font-medium">${esc(d.name)}</td>
+      <td class="px-3 py-1.5 text-sm font-medium">${esc(d.name)}${exTag}</td>
       <td class="px-3 py-1.5 text-sm text-slate-700">${esc(d.jobTitle)}</td>
       <td class="px-3 py-1.5 text-sm text-slate-700">${esc(d.dept)}</td>
       <td class="px-3 py-1.5 text-sm">${esc(d.referrer)}</td>
