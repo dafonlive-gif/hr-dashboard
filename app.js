@@ -2854,33 +2854,16 @@ function renderChannelOverview() {
     }
   }
 
-  // === 未追蹤管道 — 以「K 槽召募達成率」為真實入職基準 ===
-  // 優先用 K 槽 achievement_hires.json（HR 官方紀錄），fallback 用 monthly_trend
+  // === 資料覆蓋率（用 K 槽達成率 Excel 為真實基準）===
+  // 只計算顯示用，不另插管道卡片
   let periodHires = 0;
-  let hiresSource = '';
   const ach = re.achievement;
   if (ach && Array.isArray(ach.by_month_hires)) {
-    const matched = ach.by_month_hires.filter(m => m.month >= monthFrom && m.month <= monthTo);
-    periodHires = matched.reduce((s, m) => s + (m.hires || 0), 0);
-    hiresSource = `K 槽 ${ach.year} 召募達成率 Excel`;
-  } else {
-    const trend = (src.monthly_trend || []).filter(m => m.month >= monthFrom && m.month <= monthTo);
-    periodHires = trend.reduce((s, m) => s + (m.new_hires || 0), 0);
-    hiresSource = 'HR 在職清單 monthly_trend';
+    periodHires = ach.by_month_hires
+      .filter(m => m.month >= monthFrom && m.month <= monthTo)
+      .reduce((s, m) => s + (m.hires || 0), 0);
   }
   const trackedHires = channels.reduce((s, c) => s + (c.hired || 0), 0);
-  const untrackedHires = Math.max(0, periodHires - trackedHires);
-  if (periodHires > 0) {
-    channels.push({
-      name: '(未追蹤管道)', icon: '❓', color: 'slate',
-      spend: 0, leads: null, in_ats: null, invited: null,
-      hired: untrackedHires,
-      period: `${monthFrom} ~ ${monthTo}` + (dept ? ` (${dept})` : ''),
-      coverageNote: `HR 直接招聘 / ATS 未建檔 (${hiresSource} ${periodHires} - 追蹤 ${trackedHires})`,
-      spendNote: null,
-      noData: false,
-    });
-  }
 
   // 卡片
   const cardsEl = document.getElementById('ov-channel-cards');
