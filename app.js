@@ -2854,10 +2854,20 @@ function renderChannelOverview() {
     }
   }
 
-  // === 未追蹤管道（HR 直接招聘，ATS 無紀錄）===
-  // 真實 YTD 新進 - 4 管道 hired 加總 = 未追蹤
-  const trend = (src.monthly_trend || []).filter(m => m.month >= monthFrom && m.month <= monthTo);
-  const periodHires = trend.reduce((s, m) => s + (m.new_hires || 0), 0);
+  // === 未追蹤管道 — 以「K 槽召募達成率」為真實入職基準 ===
+  // 優先用 K 槽 achievement_hires.json（HR 官方紀錄），fallback 用 monthly_trend
+  let periodHires = 0;
+  let hiresSource = '';
+  const ach = re.achievement;
+  if (ach && Array.isArray(ach.by_month_hires)) {
+    const matched = ach.by_month_hires.filter(m => m.month >= monthFrom && m.month <= monthTo);
+    periodHires = matched.reduce((s, m) => s + (m.hires || 0), 0);
+    hiresSource = `K 槽 ${ach.year} 召募達成率 Excel`;
+  } else {
+    const trend = (src.monthly_trend || []).filter(m => m.month >= monthFrom && m.month <= monthTo);
+    periodHires = trend.reduce((s, m) => s + (m.new_hires || 0), 0);
+    hiresSource = 'HR 在職清單 monthly_trend';
+  }
   const trackedHires = channels.reduce((s, c) => s + (c.hired || 0), 0);
   const untrackedHires = Math.max(0, periodHires - trackedHires);
   if (periodHires > 0) {
@@ -2866,7 +2876,7 @@ function renderChannelOverview() {
       spend: 0, leads: null, in_ats: null, invited: null,
       hired: untrackedHires,
       period: `${monthFrom} ~ ${monthTo}` + (dept ? ` (${dept})` : ''),
-      coverageNote: `HR 直接招聘 / ATS 無紀錄 (真實 ${periodHires} - 追蹤 ${trackedHires})`,
+      coverageNote: `HR 直接招聘 / ATS 未建檔 (${hiresSource} ${periodHires} - 追蹤 ${trackedHires})`,
       spendNote: null,
       noData: false,
     });
