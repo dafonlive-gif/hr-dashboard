@@ -2854,6 +2854,24 @@ function renderChannelOverview() {
     }
   }
 
+  // === 未追蹤管道（HR 直接招聘，ATS 無紀錄）===
+  // 真實 YTD 新進 - 4 管道 hired 加總 = 未追蹤
+  const trend = (src.monthly_trend || []).filter(m => m.month >= monthFrom && m.month <= monthTo);
+  const periodHires = trend.reduce((s, m) => s + (m.new_hires || 0), 0);
+  const trackedHires = channels.reduce((s, c) => s + (c.hired || 0), 0);
+  const untrackedHires = Math.max(0, periodHires - trackedHires);
+  if (periodHires > 0) {
+    channels.push({
+      name: '(未追蹤管道)', icon: '❓', color: 'slate',
+      spend: 0, leads: null, in_ats: null, invited: null,
+      hired: untrackedHires,
+      period: `${monthFrom} ~ ${monthTo}` + (dept ? ` (${dept})` : ''),
+      coverageNote: `HR 直接招聘 / ATS 無紀錄 (真實 ${periodHires} - 追蹤 ${trackedHires})`,
+      spendNote: null,
+      noData: false,
+    });
+  }
+
   // 卡片
   const cardsEl = document.getElementById('ov-channel-cards');
   cardsEl.innerHTML = channels.map(c => {
@@ -2864,6 +2882,7 @@ function renderChannelOverview() {
       blue: ['bg-blue-50', 'border-blue-200', 'text-blue-700'],
       purple: ['bg-purple-50', 'border-purple-200', 'text-purple-700'],
       emerald: ['bg-emerald-50', 'border-emerald-200', 'text-emerald-700'],
+      slate: ['bg-slate-50', 'border-slate-300', 'text-slate-700'],
     };
     const [bg, br, tc] = colorMap[c.color] || colorMap.blue;
     const spendInfo = c.spendNote ? `title="${c.spendNote}"` : '';
@@ -2939,8 +2958,15 @@ function renderChannelOverview() {
   renderOvAppsChart(channels);
   renderOvCplChart(channels);
 
-  // note
-  document.getElementById('ov-note').textContent = '管道數：' + channels.length;
+  // note + 資料覆蓋率
+  const noteEl = document.getElementById('ov-note');
+  if (periodHires > 0) {
+    const covPct = ((trackedHires / periodHires) * 100).toFixed(0);
+    const covColor = covPct >= 70 ? 'text-emerald-700' : (covPct >= 40 ? 'text-amber-700' : 'text-rose-700');
+    noteEl.innerHTML = `管道數：${channels.length}　|　<span class="${covColor}">資料覆蓋率 ${covPct}% (${trackedHires}/${periodHires})</span>`;
+  } else {
+    noteEl.textContent = '管道數：' + channels.length;
+  }
 }
 
 function renderOvAppsChart(channels) {
