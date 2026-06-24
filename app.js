@@ -2526,7 +2526,22 @@ function renderChannelOverview() {
   const [ty, tm] = monthTo.split('-').map(Number);
   const periodMonthCount = Math.max(1, (ty - fy) * 12 + (tm - fm) + 1);
 
-  const aggregateWeekly = (data, name, icon, color, costKey) => {
+  // 從 channel_intake (ATS source 反推) 取進 ATS / 邀約 / 報到（按月+部門）
+  const channelIntakeAll = re.channel_intake?.by_source_month_dept || [];
+  const aggregateIntake = (sourceKey) => {
+    const matched = channelIntakeAll.filter(x =>
+      x.source === sourceKey
+      && x.month >= monthFrom && x.month <= monthTo
+      && (!dept || x.dept === dept)
+    );
+    return matched.reduce((s, x) => ({
+      in_ats:  s.in_ats  + (x.in_ats  || 0),
+      invited: s.invited + (x.invited || 0),
+      hired:   s.hired   + (x.hired   || 0),
+    }), {in_ats: 0, invited: 0, hired: 0});
+  };
+
+  const aggregateWeekly = (data, name, icon, color, costKey, intakeKey) => {
     if (!data || !data.by_week) return;
     const fromDate = monthFrom + '-01';
     const lastDay = new Date(ty, tm, 0).getDate();
@@ -2534,6 +2549,8 @@ function renderChannelOverview() {
     const matched = data.by_week.filter(w =>
       w.week_end >= fromDate && w.week_start <= toDate
     );
+    // ATS 漏斗（從 channel_intake 取）
+    const intake = intakeKey ? aggregateIntake(intakeKey) : {in_ats: null, invited: null, hired: null};
     // 年費月攤提（不論該期間有沒有週報資料，年費都在跑）
     const annualFee = (channelCosts[costKey] || {}).annual_fee || 0;
     const amortizedSpend = annualFee ? Math.round(annualFee / 12 * periodMonthCount) : 0;
@@ -2542,11 +2559,12 @@ function renderChannelOverview() {
     if (matched.length === 0) {
       channels.push({
         name, icon, color,
-        spend: amortizedSpend, leads: null, in_ats: null, invited: null, hired: null,
+        spend: amortizedSpend, leads: null,
+        in_ats: intake.in_ats || null, invited: intake.invited || null, hired: intake.hired || null,
         pv: null, jobCount: null,
         period: `${monthFrom} ~ ${monthTo}`,
         coverageNote: dataStartMonth ? `本期間無週報（資料起始 ${dataStartMonth}）` : '本期間無週報',
-        noData: true,
+        noData: !intake.in_ats && !intake.invited && !intake.hired,
         spendNote: amortizedSpend ? `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月` : null,
       });
       return;
@@ -2570,7 +2588,7 @@ function renderChannelOverview() {
       name, icon, color,
       spend: amortizedSpend,
       leads: app,
-      in_ats: null, invited: null, hired: null,
+      in_ats: intake.in_ats, invited: intake.invited, hired: intake.hired,
       pv: pv,
       jobCount: jobCount,
       period: `${monthFrom} ~ ${monthTo}` + (dept ? ` ${dept}` : ''),
@@ -2579,8 +2597,8 @@ function renderChannelOverview() {
       dataStartNote: dataStartMonth && dataStartMonth > monthFrom ? `資料起始 ${dataStartMonth}` : null,
     });
   };
-  aggregateWeekly(re.weekly_104,  '104 人力銀行',  '🔵', 'blue',   '104');
-  aggregateWeekly(re.weekly_1111, '1111 人力銀行', '🟣', 'purple', '1111');
+  aggregateWeekly(re.weekly_104,  '104 人力銀行',  '🔵', 'blue',   '104',  '104');
+  aggregateWeekly(re.weekly_1111, '1111 人力銀行', '🟣', 'purple', '1111', '1111');
 
   // 內部推薦 — 從 by_month / by_month_dept 依上方期間+部門篩選器動態加總
   if (REFERRAL_DATA && (REFERRAL_DATA.by_month || REFERRAL_DATA.by_month_dept)) {
