@@ -2583,6 +2583,71 @@ function renderReferralSection() {
       <tbody>${refBody || '<tr><td colspan="5" class="p-4 text-center text-slate-400">尚無推薦人資料</td></tr>'}</tbody>
     </table>
   `;
+
+  renderReferralBonusDetails();
+}
+
+// 推薦獎金逐筆明細
+function renderReferralBonusDetails() {
+  const wrap = document.getElementById('ref-bonus-table');
+  if (!wrap || !REFERRAL_DATA) return;
+  const details = REFERRAL_DATA.bonus_details || [];
+  const summary = REFERRAL_DATA.bonus_summary || {};
+  document.getElementById('ref-bonus-eligible').textContent = summary.eligible_hires ?? '-';
+  document.getElementById('ref-bonus-ineligible').textContent = summary.ineligible_hires ?? '-';
+  document.getElementById('ref-bonus-m3').textContent = summary.milestones_3m_reached ?? '-';
+  document.getElementById('ref-bonus-m6').textContent = summary.milestones_6m_reached ?? '-';
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const mileBadge = (mile) => {
+    if (!mile) return '<span class="text-slate-300">—</span>';
+    if (mile.reached) return `<span class="px-2 py-0.5 rounded text-[11px] bg-emerald-100 text-emerald-700">已達 ${mile.date} ($${fmtNum(mile.amount)})</span>`;
+    return `<span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 text-slate-600">${mile.date} 後到期</span>`;
+  };
+
+  const rows = details.map(d => {
+    if (!d.applicable) {
+      return `<tr class="border-t border-slate-100 bg-slate-50">
+        <td class="px-3 py-1.5 text-sm font-medium text-slate-500">${esc(d.name)}</td>
+        <td class="px-3 py-1.5 text-sm text-slate-500">${esc(d.jobTitle)}</td>
+        <td class="px-3 py-1.5 text-sm text-slate-500">${esc(d.dept)}</td>
+        <td class="px-3 py-1.5 text-sm text-slate-500">${esc(d.referrer)}</td>
+        <td class="px-3 py-1.5 text-sm text-slate-400 whitespace-nowrap">${esc(d.startDate)}</td>
+        <td class="px-3 py-1.5 text-sm" colspan="2"><span class="text-xs text-slate-500">⊘ 不適用 — ${esc(d.reason_not_applicable)}</span></td>
+        <td class="px-3 py-1.5 text-sm text-right text-slate-400">$0</td>
+      </tr>`;
+    }
+    const total = d.paid + d.pending;
+    return `<tr class="border-t border-slate-100 hover:bg-emerald-50">
+      <td class="px-3 py-1.5 text-sm font-medium">${esc(d.name)}</td>
+      <td class="px-3 py-1.5 text-sm text-slate-700">${esc(d.jobTitle)}</td>
+      <td class="px-3 py-1.5 text-sm text-slate-700">${esc(d.dept)}</td>
+      <td class="px-3 py-1.5 text-sm">${esc(d.referrer)}</td>
+      <td class="px-3 py-1.5 text-sm text-slate-600 whitespace-nowrap">${esc(d.startDate)}</td>
+      <td class="px-3 py-1.5">${mileBadge(d.milestone_3m)}</td>
+      <td class="px-3 py-1.5">${mileBadge(d.milestone_6m)}</td>
+      <td class="px-3 py-1.5 text-sm text-right whitespace-nowrap">
+        <span class="font-semibold text-rose-700">$${fmtNum(d.paid)}</span>
+        <span class="text-[10px] text-slate-400">/ 待 $${fmtNum(d.pending)}</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `<table class="min-w-full text-sm">
+    <thead class="bg-slate-50 sticky top-0">
+      <tr class="text-xs text-slate-600">
+        <th class="text-left px-3 py-2">姓名</th>
+        <th class="text-left px-3 py-2">職缺</th>
+        <th class="text-left px-3 py-2">部門</th>
+        <th class="text-left px-3 py-2">推薦人</th>
+        <th class="text-left px-3 py-2">入職日</th>
+        <th class="text-left px-3 py-2">3 個月 ($3,000)</th>
+        <th class="text-left px-3 py-2">6 個月 ($3,000)</th>
+        <th class="text-right px-3 py-2">已發/待發</th>
+      </tr>
+    </thead>
+    <tbody>${rows || '<tr><td colspan="8" class="p-4 text-center text-slate-400">尚無已報到推薦案</td></tr>'}</tbody>
+  </table>`;
 }
 
 // ========== 招募管道綜合評估 ==========
