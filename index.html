@@ -603,6 +603,24 @@
           </div>
         </div>
 
+        <!-- FB 跨管道轉投：FB lead 後改投 104/1111/website 的人 (phone 末9碼比中) -->
+        <div id="funnel-cross-channel" class="mb-5 bg-gradient-to-r from-fuchsia-50 to-rose-50 border border-fuchsia-200 rounded-lg p-4 hidden"
+             title="這些人看 FB 廣告後沒直接從 FB 表單投，改去人力銀行 / 官網投履歷。phone 末9碼比中即列入；姓名可能是化名。此數字已併入上方『進 ATS / 已邀約 / 已報到』。">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <div class="text-xs text-fuchsia-700 font-medium">🔄 FB 跨管道轉投人力銀行 <span class="text-slate-400 cursor-help">ⓘ</span></div>
+              <div class="text-2xl font-bold text-fuchsia-700 mt-1"><span id="funnel-cc-total">-</span> 人</div>
+              <div class="text-xs text-fuchsia-600 mt-1">看 FB → 改投 104/1111/官網投履歷（phone 末9碼比中）</div>
+            </div>
+            <div class="text-xs text-slate-700 space-y-0.5">
+              <div>104：<span id="funnel-cc-104" class="font-semibold">-</span> 人</div>
+              <div>1111：<span id="funnel-cc-1111" class="font-semibold">-</span> 人</div>
+              <div>官網：<span id="funnel-cc-website" class="font-semibold">-</span> 人</div>
+              <div class="pt-1 border-t border-fuchsia-200 mt-1">其中邀約 <span id="funnel-cc-invited" class="font-semibold text-amber-700">-</span> / 報到 <span id="funnel-cc-hired" class="font-semibold text-emerald-700">-</span></div>
+            </div>
+          </div>
+        </div>
+
         <!-- 漏斗圖 + 未邀約原因圓餅 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
           <div class="border border-slate-100 rounded-lg p-4">

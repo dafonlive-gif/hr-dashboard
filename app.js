@@ -2078,6 +2078,31 @@ function renderFunnelSection() {
   renderFunnelByJob(view.by_job);
   renderFunnelCampaigns(view.camps);
   renderFunnelPendingStats(view.pending);
+  renderFunnelCrossChannel(d, view);
+}
+
+// FB 跨管道轉投：FB lead 後改投 104/1111/website 的人
+function renderFunnelCrossChannel(d, view) {
+  const card = document.getElementById('funnel-cross-channel');
+  if (!card) return;
+  const cc = d.fb_cross_channel;
+  if (!cc || !Array.isArray(cc.by_source_month)) { card.classList.add('hidden'); return; }
+  const monthFrom = view.dateFrom ? view.dateFrom.slice(0, 7) : '';
+  const monthTo = view.dateTo ? view.dateTo.slice(0, 7) : '';
+  const inRange = (m) => (!monthFrom || m >= monthFrom) && (!monthTo || m <= monthTo);
+  const filtered = cc.by_source_month.filter(x => inRange(x.in_month || ''));
+  const total = filtered.length;
+  if (total === 0) { card.classList.add('hidden'); return; }
+  const cnt = (src) => filtered.filter(x => x.src === src).length;
+  const invited = filtered.filter(x => x.invited).length;
+  const hired = filtered.filter(x => x.hired).length;
+  document.getElementById('funnel-cc-total').textContent = total;
+  document.getElementById('funnel-cc-104').textContent = cnt('104');
+  document.getElementById('funnel-cc-1111').textContent = cnt('1111');
+  document.getElementById('funnel-cc-website').textContent = cnt('website');
+  document.getElementById('funnel-cc-invited').textContent = invited;
+  document.getElementById('funnel-cc-hired').textContent = hired;
+  card.classList.remove('hidden');
 }
 
 function renderFunnelChart(s) {
