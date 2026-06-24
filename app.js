@@ -2621,7 +2621,7 @@ function renderChannelOverview() {
         leads: sum.leads,
         in_ats: sum.in_ats,
         invited: sum.invited,
-        hired: sum.hired || null,
+        hired: sum.hired,  // 0 也要顯示，不要轉 null
         period: `${monthFrom} ~ ${monthTo}` + (dept ? ` (${dept})` : ''),
         coverageNote: fullCover ? null : `實際資料涵蓋 ${actualFrom} ~ ${actualTo}`,
       });
