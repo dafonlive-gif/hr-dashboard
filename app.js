@@ -2856,15 +2856,27 @@ function renderChannelOverview() {
       const actualFrom = months[0];
       const actualTo = months[months.length-1];
       const fullCover = (actualFrom === monthFrom && actualTo === monthTo);
+      // 推薦獎金成本（已發 + 待發）— 依期間篩選 bonus_details 的 startDate
+      let bonusPaid = 0, bonusPending = 0;
+      (REFERRAL_DATA.bonus_details || []).forEach(b => {
+        const m = (b.startDate || '').slice(0, 7);
+        if (!m || m < monthFrom || m > monthTo) return;
+        if (dept && b.dept !== dept) return;
+        bonusPaid += (b.paid || 0);
+        bonusPending += (b.pending || 0);
+      });
       channels.push({
         name: '內部推薦', icon: '🤝', color: 'emerald',
-        spend: 0,
+        spend: bonusPaid,  // 已實際發放的獎金 = 真實投入
+        bonusPending: bonusPending,
         leads: sum.referrals,
         in_ats: sum.in_ats,
         invited: sum.invited,
         hired: sum.hired,
         period: `${monthFrom} ~ ${monthTo}` + (dept ? ` (${dept})` : ''),
         coverageNote: fullCover ? null : `實際資料涵蓋 ${actualFrom} ~ ${actualTo}`,
+        extraInfo: bonusPending > 0 ? `💰 已發 $${fmtNum(bonusPaid)} / 待發 $${fmtNum(bonusPending)}（3+6 個月分段）` : null,
+        spendNote: bonusPaid > 0 ? '推薦獎金已發放金額（達門檻後次月發薪）' : null,
       });
     }
   }
