@@ -2833,6 +2833,9 @@ function renderChannelOverview() {
         ? (dept ? `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月 × ${dept} 進ATS 比例`
                 : `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月`)
         : null,
+      paymentInfo: (channelCosts[costKey] || {}).payment_month
+        ? `實際付款 ${(channelCosts[costKey]).payment_month}: $${fmtNum(annualFee)}`
+        : null,
       dataStartNote: dataStartMonth && dataStartMonth > monthFrom ? `資料起始 ${dataStartMonth}` : null,
     });
   };
@@ -2928,6 +2931,7 @@ function renderChannelOverview() {
     const dataStartTag = c.dataStartNote ? `<div class="text-[10px] text-amber-700 mt-1">⚠ ${c.dataStartNote}</div>` : '';
     const coverageTag = c.coverageNote ? `<div class="text-[10px] text-slate-500 mt-1">${c.coverageNote}</div>` : '';
     const extraInfoTag = c.extraInfo ? `<div class="text-[10px] text-fuchsia-700 mt-1 font-medium bg-fuchsia-50 px-2 py-1 rounded">${c.extraInfo}</div>` : '';
+    const paymentTag = c.paymentInfo ? `<div class="text-[10px] text-indigo-700 mt-1 bg-indigo-50 px-2 py-0.5 rounded">💸 ${c.paymentInfo}</div>` : '';
     const spendIcon = c.spendNote ? '<span class="text-slate-400 cursor-help">ⓘ</span>' : '';
     return `
       <div class="${bg} border ${br} rounded-lg p-4">
@@ -2946,6 +2950,7 @@ function renderChannelOverview() {
           <div><span class="text-slate-500">CPL</span><div class="font-bold">${cpl ? '$' + fmtNum(cpl) : '—'}</div></div>
         </div>
         ${extraInfoTag}
+        ${paymentTag}
         ${coverageTag}
         ${dataStartTag}
       </div>
