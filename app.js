@@ -2779,8 +2779,17 @@ function renderChannelOverview() {
     // ATS 漏斗（從 channel_intake 取）
     const intake = intakeKey ? aggregateIntake(intakeKey) : {in_ats: null, invited: null, hired: null};
     // 年費月攤提（不論該期間有沒有週報資料，年費都在跑）
+    // 有 dept 篩選時：按該 dept 在該管道的 in_ats 比例分攤年費；無篩選用全額
     const annualFee = (channelCosts[costKey] || {}).annual_fee || 0;
-    const amortizedSpend = annualFee ? Math.round(annualFee / 12 * periodMonthCount) : 0;
+    let amortizedSpend = annualFee ? Math.round(annualFee / 12 * periodMonthCount) : 0;
+    if (dept && intakeKey && amortizedSpend > 0) {
+      // 全公司同期 in_ats 加總
+      const allIn = channelIntakeAll
+        .filter(x => x.source === intakeKey && x.month >= monthFrom && x.month <= monthTo)
+        .reduce((s, x) => s + (x.in_ats || 0), 0);
+      const ratio = allIn > 0 ? (intake.in_ats / allIn) : 0;
+      amortizedSpend = Math.round(amortizedSpend * ratio);
+    }
     const dataStartMonth = data.data_range_start ? data.data_range_start.slice(0, 7) : null;
 
     if (matched.length === 0) {
@@ -2820,7 +2829,10 @@ function renderChannelOverview() {
       jobCount: jobCount,
       period: `${monthFrom} ~ ${monthTo}` + (dept ? ` ${dept}` : ''),
       coverageNote: `實際資料涵蓋 ${periodStart} ~ ${periodEnd} (${matched.length} 週報)`,
-      spendNote: amortizedSpend ? `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月` : null,
+      spendNote: amortizedSpend
+        ? (dept ? `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月 × ${dept} 進ATS 比例`
+                : `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月`)
+        : null,
       dataStartNote: dataStartMonth && dataStartMonth > monthFrom ? `資料起始 ${dataStartMonth}` : null,
     });
   };
@@ -2882,13 +2894,20 @@ function renderChannelOverview() {
   }
 
   // === 資料覆蓋率（用 K 槽達成率 Excel 為真實基準）===
-  // 只計算顯示用，不另插管道卡片
+  // 部門篩選時改用 persons[] 按 dept filter 加總；無篩選時用 by_month_hires
   let periodHires = 0;
   const ach = re.achievement;
-  if (ach && Array.isArray(ach.by_month_hires)) {
-    periodHires = ach.by_month_hires
-      .filter(m => m.month >= monthFrom && m.month <= monthTo)
-      .reduce((s, m) => s + (m.hires || 0), 0);
+  if (ach) {
+    if (dept && Array.isArray(ach.persons)) {
+      periodHires = ach.persons.filter(p => {
+        const m = (p.start_date || '').slice(0, 7);
+        return m >= monthFrom && m <= monthTo && p.dept === dept;
+      }).length;
+    } else if (Array.isArray(ach.by_month_hires)) {
+      periodHires = ach.by_month_hires
+        .filter(m => m.month >= monthFrom && m.month <= monthTo)
+        .reduce((s, m) => s + (m.hires || 0), 0);
+    }
   }
   const trackedHires = channels.reduce((s, c) => s + (c.hired || 0), 0);
 
