@@ -2717,6 +2717,18 @@ function renderChannelOverview() {
       const actualFrom = months[0];
       const actualTo = months[months.length-1];
       const fullCover = (actualFrom === monthFrom && actualTo === monthTo);
+      // FB 跨管道轉投人數（FB lead → 改投 104/1111/website 的 phone 末9碼比中數）
+      let ccTotal = 0, ccInvited = 0, ccHired = 0, ccBySrc = {};
+      const ccArr = FUNNEL_DATA.fb_cross_channel?.by_source_month || [];
+      ccArr.filter(x => {
+        const m = x.in_month || '';
+        return m >= monthFrom && m <= monthTo;
+      }).forEach(x => {
+        ccTotal++;
+        if (x.invited) ccInvited++;
+        if (x.hired) ccHired++;
+        ccBySrc[x.src] = (ccBySrc[x.src] || 0) + 1;
+      });
       channels.push({
         name: 'FB 廣告', icon: '📣', color: 'rose',
         spend: sum.spend,
@@ -2726,6 +2738,9 @@ function renderChannelOverview() {
         hired: sum.hired,  // 0 也要顯示，不要轉 null
         period: `${monthFrom} ~ ${monthTo}` + (dept ? ` (${dept})` : ''),
         coverageNote: fullCover ? null : `實際資料涵蓋 ${actualFrom} ~ ${actualTo}`,
+        extraInfo: ccTotal > 0
+          ? `🔄 含跨管道 ${ccTotal} (104:${ccBySrc['104']||0}/1111:${ccBySrc['1111']||0}/官網:${ccBySrc['website']||0}) → 邀 ${ccInvited} / 報 ${ccHired}`
+          : null,
       });
     }
   }
@@ -2881,6 +2896,7 @@ function renderChannelOverview() {
     const spendInfo = c.spendNote ? `title="${c.spendNote}"` : '';
     const dataStartTag = c.dataStartNote ? `<div class="text-[10px] text-amber-700 mt-1">⚠ ${c.dataStartNote}</div>` : '';
     const coverageTag = c.coverageNote ? `<div class="text-[10px] text-slate-500 mt-1">${c.coverageNote}</div>` : '';
+    const extraInfoTag = c.extraInfo ? `<div class="text-[10px] text-fuchsia-700 mt-1 font-medium bg-fuchsia-50 px-2 py-1 rounded">${c.extraInfo}</div>` : '';
     const spendIcon = c.spendNote ? '<span class="text-slate-400 cursor-help">ⓘ</span>' : '';
     return `
       <div class="${bg} border ${br} rounded-lg p-4">
@@ -2898,6 +2914,7 @@ function renderChannelOverview() {
           <div><span class="text-slate-500">已報到</span><div class="font-bold text-green-700">${c.hired == null ? '—' : fmtNum(c.hired)}</div></div>
           <div><span class="text-slate-500">CPL</span><div class="font-bold">${cpl ? '$' + fmtNum(cpl) : '—'}</div></div>
         </div>
+        ${extraInfoTag}
         ${coverageTag}
         ${dataStartTag}
       </div>
@@ -2950,6 +2967,21 @@ function renderChannelOverview() {
   // 圖表
   renderOvAppsChart(channels);
   renderOvCplChart(channels);
+
+  // 全期間 × 全管道 統計總結
+  const totSpend = channels.reduce((s, c) => s + (c.spend || 0), 0);
+  const totLeads = channels.reduce((s, c) => s + (c.leads || 0), 0);
+  const totInAts = channels.reduce((s, c) => s + (c.in_ats || 0), 0);
+  const totInvited = channels.reduce((s, c) => s + (c.invited || 0), 0);
+  const totHired = channels.reduce((s, c) => s + (c.hired || 0), 0);
+  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setText('ov-tot-spend', fmtNum(Math.round(totSpend)));
+  setText('ov-tot-leads', fmtNum(totLeads));
+  setText('ov-tot-inats', fmtNum(totInAts));
+  setText('ov-tot-invited', fmtNum(totInvited));
+  setText('ov-tot-hired', fmtNum(totHired));
+  setText('ov-rate', totInAts > 0 ? (totHired / totInAts * 100).toFixed(1) + '%' : '—');
+  setText('ov-cph', totHired > 0 ? fmtNum(Math.round(totSpend / totHired)) : '—');
 
   // note + 資料覆蓋率
   const noteEl = document.getElementById('ov-note');

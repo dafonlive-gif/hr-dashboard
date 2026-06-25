@@ -442,6 +442,43 @@
           </h2>
           <span class="text-xs text-slate-500" id="ov-note"></span>
         </div>
+
+        <!-- 總體摘要：跨管道加總 + 整體轉換率 -->
+        <div class="bg-white border border-indigo-200 rounded-lg p-4 mb-5">
+          <div class="text-xs font-semibold text-slate-600 mb-2">📊 全期間 × 全管道 統計總結</div>
+          <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 text-center">
+            <div>
+              <div class="text-[10px] text-slate-500">總投入</div>
+              <div class="text-lg font-bold text-rose-700">$<span id="ov-tot-spend">-</span></div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500">總 Leads/履歷</div>
+              <div class="text-lg font-bold text-blue-700"><span id="ov-tot-leads">-</span></div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500">總進 ATS</div>
+              <div class="text-lg font-bold text-cyan-700"><span id="ov-tot-inats">-</span></div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500">總邀約</div>
+              <div class="text-lg font-bold text-amber-700"><span id="ov-tot-invited">-</span></div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500">總已報到</div>
+              <div class="text-lg font-bold text-emerald-700"><span id="ov-tot-hired">-</span></div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-500">整體入職率</div>
+              <div class="text-lg font-bold text-purple-700"><span id="ov-rate">-</span></div>
+              <div class="text-[10px] text-slate-400">報到/進ATS</div>
+            </div>
+            <div class="border-l border-slate-200 pl-3">
+              <div class="text-[10px] text-slate-500">每位報到成本</div>
+              <div class="text-lg font-bold text-fuchsia-700">$<span id="ov-cph">-</span></div>
+            </div>
+          </div>
+        </div>
+
         <div id="ov-channel-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-5"></div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div class="border border-slate-200 rounded-lg p-4 bg-white">
