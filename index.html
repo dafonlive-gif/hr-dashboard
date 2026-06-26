@@ -575,12 +575,18 @@
             <div id="ref-dept-table" class="overflow-auto max-h-[360px] border border-slate-100 rounded-lg"></div>
           </div>
           <div>
-            <h3 class="text-sm font-semibold text-slate-700 mb-2">
-              推薦人 Top 10
-              <span class="text-slate-400 cursor-help"
-                    title="只統計已進入 pre_employees（HR 已 offer）的推薦案；尚在 applicant 階段的內推 ATS 不記錄推薦人姓名，故加總可能小於上方「推薦人數」總計。">ⓘ</span>
-            </h3>
-            <div id="ref-referrer-table" class="overflow-auto max-h-[360px] border border-slate-100 rounded-lg"></div>
+            <details class="group">
+              <summary class="cursor-pointer list-none flex items-center justify-between mb-2 select-none">
+                <h3 class="text-sm font-semibold text-slate-700">
+                  推薦人 Top 10
+                  <span class="text-slate-400 cursor-help"
+                        title="只統計已進入 pre_employees（HR 已 offer）的推薦案；尚在 applicant 階段的內推 ATS 不記錄推薦人姓名，故加總可能小於上方「推薦人數」總計。">ⓘ</span>
+                </h3>
+                <span class="text-xs text-slate-500 group-open:hidden">▸ 點此展開明細（含推薦人姓名）</span>
+                <span class="text-xs text-slate-500 hidden group-open:inline">▾ 收起明細</span>
+              </summary>
+              <div id="ref-referrer-table" class="overflow-auto max-h-[360px] border border-slate-100 rounded-lg"></div>
+            </details>
           </div>
         </div>
 
@@ -596,7 +602,7 @@
             </div>
           </div>
           <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-slate-700">📋 推薦獎金逐筆明細</h3>
+            <h3 class="text-sm font-semibold text-slate-700">📋 推薦獎金</h3>
             <div class="text-xs text-slate-500">
               適用 <span id="ref-bonus-eligible" class="font-bold text-emerald-700">-</span> 人 /
               不適用 <span id="ref-bonus-ineligible" class="font-bold text-slate-700">-</span> 人 /
@@ -604,7 +610,14 @@
               6 個月已發 <span id="ref-bonus-m6" class="font-bold text-rose-700">-</span>
             </div>
           </div>
-          <div id="ref-bonus-table" class="overflow-auto max-h-[400px] border border-slate-100 rounded-lg"></div>
+          <details class="group">
+            <summary class="cursor-pointer list-none flex items-center justify-between mb-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 select-none">
+              <span class="text-xs font-medium text-slate-700">📋 逐筆明細（含被推薦人 / 推薦人姓名）</span>
+              <span class="text-xs text-slate-500 group-open:hidden">▸ 點此展開</span>
+              <span class="text-xs text-slate-500 hidden group-open:inline">▾ 收起</span>
+            </summary>
+            <div id="ref-bonus-table" class="overflow-auto max-h-[400px] border border-slate-100 rounded-lg mt-2"></div>
+          </details>
         </div>
       </section>
 
@@ -778,11 +791,15 @@
           <div id="funnel-pending-stats" class="overflow-auto max-h-[320px] border border-slate-100 rounded-lg"></div>
         </div>
 
-        <!-- FB 應徵者名單（含狀態） -->
-        <div class="border-t border-slate-200 pt-4 mt-4">
-          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h3 class="text-sm font-semibold text-slate-700">👥 FB 應徵者名單（含狀態 / 部門 / 職缺）</h3>
-            <div class="flex items-center gap-2 text-xs flex-wrap">
+        <!-- FB 應徵者名單（含狀態） — 預設摺疊，點才展開 -->
+        <details class="border-t border-slate-200 pt-4 mt-4 group">
+          <summary class="cursor-pointer list-none flex items-center justify-between mb-3 flex-wrap gap-2 select-none">
+            <h3 class="text-sm font-semibold text-slate-700">
+              👥 FB 應徵者名單（含姓名 / 電話）
+              <span class="ml-2 text-xs text-slate-500 group-open:hidden">▸ 點此展開</span>
+              <span class="ml-2 text-xs text-slate-500 hidden group-open:inline">▾ 收起</span>
+            </h3>
+            <div class="flex items-center gap-2 text-xs flex-wrap" onclick="event.stopPropagation()">
               <span class="text-slate-500">共 <span id="fb-apl-total" class="font-semibold text-slate-700">-</span> 人</span>
               <select id="fb-apl-status" class="border border-slate-300 rounded px-2 py-1">
                 <option value="">全部狀態</option>
@@ -797,9 +814,9 @@
               </select>
               <input id="fb-apl-search" type="search" placeholder="搜尋 姓名/職缺/部門" class="border border-slate-300 rounded px-2 py-1 w-44">
             </div>
-          </div>
+          </summary>
           <div id="fb-apl-table" class="overflow-auto max-h-[500px] border border-slate-100 rounded-lg"></div>
-        </div>
+        </details>
       </section>
 
       <!-- 人力銀行招募效益（104 + 1111 並列） -->
