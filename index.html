@@ -392,6 +392,18 @@
           <span id="dept-filter-count" class="text-slate-500"></span>
         </div>
 
+        <!-- 篩選=全部時的圓餅總覽（隱藏 dept-table 用） -->
+        <div id="dept-pies" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 hidden">
+          <div class="border border-slate-200 rounded-lg p-3 bg-slate-50">
+            <div class="text-sm font-semibold text-slate-700 mb-2">離職人數 by 事業單位</div>
+            <div style="position:relative; height:280px;"><canvas id="chart-dept-resign-pie"></canvas></div>
+          </div>
+          <div class="border border-slate-200 rounded-lg p-3 bg-slate-50">
+            <div class="text-sm font-semibold text-slate-700 mb-2">未補職缺 by 事業單位</div>
+            <div style="position:relative; height:280px;"><canvas id="chart-dept-pending-pie"></canvas></div>
+          </div>
+        </div>
+
         <div id="dept-table" class="overflow-auto max-h-[640px] border border-slate-100 rounded-lg"></div>
 
         <details class="group border-t border-slate-200 pt-4" style="display:none">

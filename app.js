@@ -1582,8 +1582,7 @@ function _renderDeptJobsSubTable(jobs) {
       <td class="px-3 py-1 text-right text-sm">${p.demand || 0}</td>
       <td class="px-3 py-1 text-right text-sm text-emerald-700">${p.hired || 0}</td>
       <td class="px-3 py-1 text-right text-sm ${(p.pending || 0) > 0 ? 'text-amber-600 font-semibold' : ''}">${p.pending || 0}</td>
-      <td class="px-3 py-1"><span class="text-[10px] px-1.5 py-0.5 rounded ${p.type === '新增' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${p.type || '-'}</span></td>
-      <td class="px-3 py-1 text-xs text-slate-500 whitespace-nowrap">${p.open_dt || '-'}</td>
+      <td class="px-3 py-1"><span class="text-[10px] px-1.5 py-0.5 rounded ${p.type === '新增' ? 'bg-emerald-100 text-emerald-700' : p.type === '離職遞補' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}">${p.type || '-'}</span></td>
     </tr>`).join('');
   return `<table class="min-w-full text-xs bg-slate-50">
     <thead><tr class="text-[10px] text-slate-500 uppercase">
@@ -1593,7 +1592,6 @@ function _renderDeptJobsSubTable(jobs) {
       <th class="text-right px-3 py-1.5">已錄取</th>
       <th class="text-right px-3 py-1.5">未補</th>
       <th class="text-left px-3 py-1.5">類型</th>
-      <th class="text-left px-3 py-1.5">開缺日</th>
     </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
@@ -1605,10 +1603,64 @@ function toggleDeptJobs(safeId) {
   if (arrow) arrow.textContent = row.classList.contains('hidden') ? '▸' : '▾';
 }
 
+let _deptResignPie = null;
+let _deptPendingPie = null;
+const _DEPT_PIE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#94a3b8'];
+
+function _renderDeptPies() {
+  // 以「事業單位」聚合
+  const bizMap = _deptBizMap();
+  const resignByBiz = {};
+  const pendingByBiz = {};
+  (FILTERED.departments || []).forEach(d => {
+    const biz = bizMap[d.name] || d.name || '(未分類)';
+    resignByBiz[biz] = (resignByBiz[biz] || 0) + (d.resignations || 0);
+    pendingByBiz[biz] = (pendingByBiz[biz] || 0) + (d.pending_fill || 0);
+  });
+  const toTopN = (m, n) => {
+    const arr = Object.entries(m).filter(([k, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    if (arr.length <= n) return arr;
+    const top = arr.slice(0, n);
+    const otherSum = arr.slice(n).reduce((s, [_, v]) => s + v, 0);
+    if (otherSum > 0) top.push(['其他', otherSum]);
+    return top;
+  };
+  const renderPie = (canvasId, dataMap, prevChart, title) => {
+    const cv = document.getElementById(canvasId);
+    if (!cv) return null;
+    const top = toTopN(dataMap, 8);
+    if (prevChart) prevChart.destroy();
+    if (top.length === 0) {
+      cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+      return null;
+    }
+    return new Chart(cv, {
+      type: 'doughnut',
+      data: {
+        labels: top.map(x => x[0]),
+        datasets: [{ data: top.map(x => x[1]), backgroundColor: _DEPT_PIE_COLORS, borderWidth: 1 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } },
+          tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed} 位 (${Math.round(c.parsed / top.reduce((s, x) => s + x[1], 0) * 100)}%)` } },
+        },
+      },
+    });
+  };
+  _deptResignPie = renderPie('chart-dept-resign-pie', resignByBiz, _deptResignPie);
+  _deptPendingPie = renderPie('chart-dept-pending-pie', pendingByBiz, _deptPendingPie);
+}
+
 function renderDeptTable() {
   _populateDeptBizFilter();
   const bizMap = _deptBizMap();
   const bizFilter = document.getElementById('dept-filter-biz')?.value || '';
+  // 全部時顯示圓餅；篩特定單位時隱藏圓餅
+  const pies = document.getElementById('dept-pies');
+  if (pies) pies.classList.toggle('hidden', !!bizFilter);
+  if (!bizFilter) _renderDeptPies();
   const turnoverFilter = document.getElementById('dept-filter-turnover')?.value || '';
   const vacancyFilter = document.getElementById('dept-filter-vacancy')?.value || '';
   const jobTypeFilter = document.getElementById('dept-filter-jobtype')?.value || '';
@@ -1672,7 +1724,7 @@ function renderDeptTable() {
           const hasJobs = jobs.length > 0;
           return `
           <tr class="${hasJobs ? 'cursor-pointer hover:bg-slate-50' : ''}" ${hasJobs ? `onclick="toggleDeptJobs('${sid}')"` : ''}>
-            <td class="text-center text-slate-400">${hasJobs ? `<span id="dept-arrow-${sid}">▸</span>` : ''}</td>
+            <td class="text-center text-slate-400">${hasJobs ? `<span id="dept-arrow-${sid}">${bizFilter ? '▾' : '▸'}</span>` : ''}</td>
             <td class="font-medium text-blue-700 hover:underline" onclick="event.stopPropagation(); drillByDept('${escapeAttr(d.name)}')" title="點此跳到部門明細鑽取">${d.name}</td>
             <td class="text-right">${fmtNum(d.current)}</td>
             <td class="text-right text-red-600">${d.resignations || '-'}</td>
@@ -1685,7 +1737,7 @@ function renderDeptTable() {
             <td class="text-right">${d.open_backfill || '-'}</td>
             <td class="text-right ${d.pending_fill > 0 ? 'text-amber-600 font-semibold' : ''}">${d.pending_fill || '-'}</td>
           </tr>
-          ${hasJobs ? `<tr id="dept-jobs-${sid}" class="hidden bg-slate-50"><td colspan="10" class="p-0">${_renderDeptJobsSubTable(jobs)}</td></tr>` : ''}
+          ${hasJobs ? `<tr id="dept-jobs-${sid}" class="${bizFilter ? '' : 'hidden'} bg-slate-50"><td colspan="10" class="p-0">${_renderDeptJobsSubTable(jobs)}</td></tr>` : ''}
           `;
         }).join('')}
       </tbody>
