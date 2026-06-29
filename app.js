@@ -1076,6 +1076,9 @@ function renderShortTermTable() {
   monthSel.innerHTML = '<option value="">全部</option>' +
     months.map(m => `<option value="${m}"${m === cur ? ' selected' : ''}>${m}</option>`).join('');
   const data = cur ? all.filter(r => (r.leave || '').startsWith(cur)) : all;
+  const cntEl = document.getElementById('short-term-count');
+  if (cntEl) cntEl.textContent = data.length;
+  _renderShortTermSummary(data);
   if (data.length === 0) {
     document.getElementById('short-term-table').innerHTML = '<p class="text-slate-400 text-sm py-8 text-center">無短期離職人員</p>';
     return;
@@ -1117,6 +1120,9 @@ function renderLeaveTracking() {
   // 套用部門篩選
   const deptFilter = document.getElementById('filter-dept')?.value || '';
   if (deptFilter) data = data.filter(r => r.dept === deptFilter);
+  const cntEl = document.getElementById('leave-tracking-count');
+  if (cntEl) cntEl.textContent = data.length;
+  _renderLeaveTrackingSummary(data);
   if (data.length === 0) {
     wrap.innerHTML = `<div class="text-center text-sm text-slate-400 py-6">${deptFilter ? `「${deptFilter}」目前無` : '本期間無'}留停/異動人員</div>`;
     return;
@@ -1530,21 +1536,144 @@ function renderHighTurnoverFocus() {
   }).join('');
 }
 
+function clearDeptFilters() {
+  ['dept-filter-biz','dept-filter-turnover','dept-filter-vacancy','dept-filter-jobtype','dept-filter-keyword'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const ck = document.getElementById('dept-filter-active-only');
+  if (ck) ck.checked = false;
+  renderDeptTable();
+}
+
+// 部門 → 事業單位 對應（從 open_positions 推；同部門可能跨事業單位，取最常見）
+function _deptBizMap() {
+  const map = {};
+  const counter = {};
+  (FILTERED.open_positions || []).forEach(p => {
+    const k = p.course || p.biz;
+    if (!k || !p.biz) return;
+    counter[k] = counter[k] || {};
+    counter[k][p.biz] = (counter[k][p.biz] || 0) + 1;
+  });
+  Object.keys(counter).forEach(k => {
+    map[k] = Object.entries(counter[k]).sort((a, b) => b[1] - a[1])[0][0];
+  });
+  return map;
+}
+
+function _populateDeptBizFilter() {
+  const sel = document.getElementById('dept-filter-biz');
+  if (!sel) return;
+  const bizs = [...new Set((FILTERED.open_positions || []).map(p => p.biz).filter(Boolean))].sort();
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">全部</option>' +
+    bizs.map(b => `<option value="${escapeAttr(b)}"${b === cur ? ' selected' : ''}>${b}</option>`).join('');
+}
+
+function _renderDeptJobsSubTable(jobs) {
+  if (!jobs.length) {
+    return `<div class="text-center text-xs text-slate-400 py-3">該部門無職缺紀錄</div>`;
+  }
+  const rows = jobs.map(p => `
+    <tr class="border-t border-slate-200">
+      <td class="px-3 py-1 text-xs text-slate-500 whitespace-nowrap">${p.month || '-'}月</td>
+      <td class="px-3 py-1 text-sm">${p.position || '-'}</td>
+      <td class="px-3 py-1 text-right text-sm">${p.demand || 0}</td>
+      <td class="px-3 py-1 text-right text-sm text-emerald-700">${p.hired || 0}</td>
+      <td class="px-3 py-1 text-right text-sm ${(p.pending || 0) > 0 ? 'text-amber-600 font-semibold' : ''}">${p.pending || 0}</td>
+      <td class="px-3 py-1"><span class="text-[10px] px-1.5 py-0.5 rounded ${p.type === '新增' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">${p.type || '-'}</span></td>
+      <td class="px-3 py-1 text-xs text-slate-500 whitespace-nowrap">${p.open_dt || '-'}</td>
+    </tr>`).join('');
+  return `<table class="min-w-full text-xs bg-slate-50">
+    <thead><tr class="text-[10px] text-slate-500 uppercase">
+      <th class="text-left px-3 py-1.5">月</th>
+      <th class="text-left px-3 py-1.5">職位</th>
+      <th class="text-right px-3 py-1.5">需求</th>
+      <th class="text-right px-3 py-1.5">已錄取</th>
+      <th class="text-right px-3 py-1.5">未補</th>
+      <th class="text-left px-3 py-1.5">類型</th>
+      <th class="text-left px-3 py-1.5">開缺日</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function toggleDeptJobs(safeId) {
+  const row = document.getElementById('dept-jobs-' + safeId);
+  const arrow = document.getElementById('dept-arrow-' + safeId);
+  if (!row) return;
+  row.classList.toggle('hidden');
+  if (arrow) arrow.textContent = row.classList.contains('hidden') ? '▸' : '▾';
+}
+
 function renderDeptTable() {
-  const data = FILTERED.departments.filter(d => d.resignations + d.new_hires + d.current > 0);
+  _populateDeptBizFilter();
+  const bizMap = _deptBizMap();
+  const bizFilter = document.getElementById('dept-filter-biz')?.value || '';
+  const turnoverFilter = document.getElementById('dept-filter-turnover')?.value || '';
+  const vacancyFilter = document.getElementById('dept-filter-vacancy')?.value || '';
+  const jobTypeFilter = document.getElementById('dept-filter-jobtype')?.value || '';
+  const kw = (document.getElementById('dept-filter-keyword')?.value || '').trim().toLowerCase();
+  const activeOnly = document.getElementById('dept-filter-active-only')?.checked || false;
+
+  let data = (FILTERED.departments || []).filter(d => d.resignations + d.new_hires + d.current > 0);
+
+  if (activeOnly) {
+    data = data.filter(d => (d.resignations + d.new_hires + d.open_new + d.open_backfill) > 0);
+  }
+  if (bizFilter) data = data.filter(d => bizMap[d.name] === bizFilter);
+  if (turnoverFilter) {
+    data = data.filter(d => {
+      const t = d.turnover_rate || 0;
+      if (turnoverFilter === 'high') return t >= 30;
+      if (turnoverFilter === 'mid') return t >= 15 && t < 30;
+      if (turnoverFilter === 'low') return t > 0 && t < 15;
+      if (turnoverFilter === 'zero') return t === 0;
+      return true;
+    });
+  }
+  if (vacancyFilter) {
+    data = data.filter(d => {
+      const totalOpen = (d.open_new || 0) + (d.open_backfill || 0);
+      if (vacancyFilter === 'has_open') return totalOpen > 0;
+      if (vacancyFilter === 'pending') return (d.pending_fill || 0) > 0;
+      if (vacancyFilter === 'filled') return totalOpen > 0 && (d.pending_fill || 0) === 0;
+      if (vacancyFilter === 'none') return totalOpen === 0;
+      return true;
+    });
+  }
+  if (jobTypeFilter) {
+    data = data.filter(d => {
+      if (jobTypeFilter === '新增') return (d.open_new || 0) > 0;
+      if (jobTypeFilter === '離職遞補') return (d.open_backfill || 0) > 0;
+      return true;
+    });
+  }
+  if (kw) data = data.filter(d => (d.name || '').toLowerCase().includes(kw));
+
+  const cntEl = document.getElementById('dept-filter-count');
+  if (cntEl) cntEl.textContent = `（${data.length} / ${FILTERED.departments.length} 部門）`;
+
+  const safeId = (s) => String(s).replace(/[^a-zA-Z0-9一-龥]/g, '_');
   const html = `
     <table class="data-table">
       <thead>
         <tr>
+          <th style="width:32px"></th>
           <th>部門</th><th class="text-right">在職</th><th class="text-right">離職</th>
           <th class="text-right">到職</th><th class="text-right">淨增減</th><th class="text-right">流失率</th>
           <th class="text-right">新增職缺</th><th class="text-right">遞補職缺</th><th class="text-right">未補</th>
         </tr>
       </thead>
       <tbody>
-        ${data.map(d => `
-          <tr class="cursor-pointer" onclick="drillByDept('${escapeAttr(d.name)}')">
-            <td class="font-medium text-blue-700 hover:underline">${d.name}</td>
+        ${data.map(d => {
+          const sid = safeId(d.name);
+          let jobs = (FILTERED.open_positions || []).filter(p => (p.course === d.name) || (p.biz === d.name && !p.course));
+          if (jobTypeFilter) jobs = jobs.filter(p => p.type === jobTypeFilter);
+          const hasJobs = jobs.length > 0;
+          return `
+          <tr class="${hasJobs ? 'cursor-pointer hover:bg-slate-50' : ''}" ${hasJobs ? `onclick="toggleDeptJobs('${sid}')"` : ''}>
+            <td class="text-center text-slate-400">${hasJobs ? `<span id="dept-arrow-${sid}">▸</span>` : ''}</td>
+            <td class="font-medium text-blue-700 hover:underline" onclick="event.stopPropagation(); drillByDept('${escapeAttr(d.name)}')" title="點此跳到部門明細鑽取">${d.name}</td>
             <td class="text-right">${fmtNum(d.current)}</td>
             <td class="text-right text-red-600">${d.resignations || '-'}</td>
             <td class="text-right text-emerald-600">${d.new_hires || '-'}</td>
@@ -1556,7 +1685,9 @@ function renderDeptTable() {
             <td class="text-right">${d.open_backfill || '-'}</td>
             <td class="text-right ${d.pending_fill > 0 ? 'text-amber-600 font-semibold' : ''}">${d.pending_fill || '-'}</td>
           </tr>
-        `).join('')}
+          ${hasJobs ? `<tr id="dept-jobs-${sid}" class="hidden bg-slate-50"><td colspan="10" class="p-0">${_renderDeptJobsSubTable(jobs)}</td></tr>` : ''}
+          `;
+        }).join('')}
       </tbody>
     </table>
   `;
@@ -1628,6 +1759,8 @@ function clearPosFilters() {
 }
 
 function renderPositionsTable() {
+  // 舊「招募職缺逐筆明細」表已合併到「部門流失與招募狀況」展開列；保留 stub 避免其他呼叫者出錯
+  if (!document.getElementById('positions-table')) return;
   populatePosFilterOptions();
   let data = FILTERED.open_positions;
   if (JOB_TYPE_FILTER) data = data.filter(p => p.type === JOB_TYPE_FILTER);
@@ -1651,6 +1784,9 @@ function renderPositionsTable() {
   if (kw) data = data.filter(p =>
     (p.position || '').toLowerCase().includes(kw)
   );
+
+  const totalEl = document.getElementById('pos-total-count');
+  if (totalEl) totalEl.textContent = data.length;
 
   const countEl = document.getElementById('pos-filter-count');
   if (countEl) countEl.textContent = `共 ${data.length} 筆`;
@@ -1684,8 +1820,139 @@ function renderPositionsTable() {
   document.getElementById('positions-table').innerHTML = html;
 }
 
+// ===== 聚合摘要區塊（取代主畫面人名表）=====
+
+function _countBy(arr, key, topN) {
+  const m = {};
+  arr.forEach(x => { const k = (x[key] || '(未填)').trim() || '(未填)'; m[k] = (m[k] || 0) + 1; });
+  let out = Object.entries(m).sort((a, b) => b[1] - a[1]);
+  if (topN) out = out.slice(0, topN);
+  return out;
+}
+
+function _chipList(items, color) {
+  if (!items.length) return '<span class="text-xs text-slate-400">無資料</span>';
+  const cls = color || 'bg-slate-100 text-slate-700';
+  return items.map(([k, v]) => `<span class="inline-block px-2 py-0.5 rounded text-xs ${cls} mr-1 mb-1">${k} <b>${v}</b></span>`).join('');
+}
+
+function _renderLeaveTrackingSummary(data) {
+  const wrap = document.getElementById('leave-tracking-summary');
+  if (!wrap) return;
+  if (!data.length) { wrap.innerHTML = ''; return; }
+  // 依 category 與 status 統計
+  const byCat = _countBy(data, 'category');
+  const overdue = data.filter(r => (r.status || '').includes('已逾期')).length;
+  const soon    = data.filter(r => (r.status || '').includes('即將復職')).length;
+  const onLeave = data.filter(r => (r.category === '留職停薪') && !(r.status || '').includes('已逾期') && !(r.status || '').includes('即將復職')).length;
+  wrap.innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+      <div class="border border-red-200 bg-red-50 rounded p-2 text-center">
+        <div class="text-xs text-red-700">已逾期復職</div>
+        <div class="text-xl font-bold text-red-700">${overdue}</div>
+      </div>
+      <div class="border border-amber-200 bg-amber-50 rounded p-2 text-center">
+        <div class="text-xs text-amber-700">30 天內即將復職</div>
+        <div class="text-xl font-bold text-amber-700">${soon}</div>
+      </div>
+      <div class="border border-blue-200 bg-blue-50 rounded p-2 text-center">
+        <div class="text-xs text-blue-700">留停中</div>
+        <div class="text-xl font-bold text-blue-700">${onLeave}</div>
+      </div>
+      <div class="border border-slate-200 bg-slate-50 rounded p-2 text-center">
+        <div class="text-xs text-slate-600">總計</div>
+        <div class="text-xl font-bold text-slate-700">${data.length}</div>
+      </div>
+    </div>
+    <div class="text-xs text-slate-600"><b>類型：</b>${_chipList(byCat, 'bg-violet-100 text-violet-800')}</div>
+  `;
+}
+
+function _renderShortTermSummary(data) {
+  const wrap = document.getElementById('short-term-summary');
+  if (!wrap) return;
+  if (!data.length) { wrap.innerHTML = '<div class="text-xs text-slate-400">無短期離職人員</div>'; return; }
+  const byDept = _countBy(data, 'dept', 5);
+  const byReason = _countBy(data, 'reason', 5);
+  const within7 = data.filter(r => (r.tenure_days || 0) <= 7).length;
+  const within30 = data.filter(r => (r.tenure_days || 0) <= 30).length;
+  wrap.innerHTML = `
+    <div class="grid grid-cols-3 gap-2 mb-2 text-center">
+      <div class="border border-red-200 bg-red-50 rounded p-2">
+        <div class="text-xs text-red-700">≤ 7 天</div>
+        <div class="text-lg font-bold text-red-700">${within7}</div>
+      </div>
+      <div class="border border-amber-200 bg-amber-50 rounded p-2">
+        <div class="text-xs text-amber-700">≤ 30 天</div>
+        <div class="text-lg font-bold text-amber-700">${within30}</div>
+      </div>
+      <div class="border border-slate-200 bg-slate-50 rounded p-2">
+        <div class="text-xs text-slate-600">總計</div>
+        <div class="text-lg font-bold text-slate-700">${data.length}</div>
+      </div>
+    </div>
+    <div class="text-xs text-slate-600 mb-1"><b>Top 部門：</b>${_chipList(byDept, 'bg-rose-100 text-rose-800')}</div>
+    <div class="text-xs text-slate-600"><b>Top 原因：</b>${_chipList(byReason, 'bg-orange-100 text-orange-800')}</div>
+  `;
+}
+
+function _renderResignSummary(data) {
+  const wrap = document.getElementById('resign-summary');
+  if (!wrap) return;
+  if (!data.length) { wrap.innerHTML = ''; return; }
+  const byReason = _countBy(data, 'reason', 6);
+  const byDept = _countBy(data, 'dept', 5);
+  const totalDays = data.reduce((s, r) => s + (r.tenure_days || 0), 0);
+  const avgTen = data.length ? Math.round(totalDays / data.length / 30) : 0;
+  wrap.innerHTML = `
+    <div class="grid grid-cols-2 gap-2 mb-2 text-center">
+      <div class="border border-slate-200 bg-slate-50 rounded p-2">
+        <div class="text-xs text-slate-600">總離職</div>
+        <div class="text-lg font-bold text-slate-700">${data.length}</div>
+      </div>
+      <div class="border border-slate-200 bg-slate-50 rounded p-2">
+        <div class="text-xs text-slate-600">平均年資</div>
+        <div class="text-lg font-bold text-slate-700">${avgTen} 月</div>
+      </div>
+    </div>
+    <div class="text-xs text-slate-600 mb-1"><b>離職原因：</b>${_chipList(byReason, 'bg-red-100 text-red-800')}</div>
+    <div class="text-xs text-slate-600"><b>Top 部門：</b>${_chipList(byDept, 'bg-rose-100 text-rose-800')}</div>
+  `;
+}
+
+function _renderNewHireSummary(data) {
+  const wrap = document.getElementById('newhire-summary');
+  if (!wrap) return;
+  if (!data.length) { wrap.innerHTML = ''; return; }
+  const byDept = _countBy(data, 'dept', 5);
+  const byTitle = _countBy(data, 'title', 5);
+  const active = data.filter(r => r.still_active).length;
+  const left = data.length - active;
+  wrap.innerHTML = `
+    <div class="grid grid-cols-3 gap-2 mb-2 text-center">
+      <div class="border border-emerald-200 bg-emerald-50 rounded p-2">
+        <div class="text-xs text-emerald-700">仍在職</div>
+        <div class="text-lg font-bold text-emerald-700">${active}</div>
+      </div>
+      <div class="border border-slate-200 bg-slate-50 rounded p-2">
+        <div class="text-xs text-slate-600">已離職</div>
+        <div class="text-lg font-bold text-slate-700">${left}</div>
+      </div>
+      <div class="border border-slate-200 bg-slate-50 rounded p-2">
+        <div class="text-xs text-slate-600">總到職</div>
+        <div class="text-lg font-bold text-slate-700">${data.length}</div>
+      </div>
+    </div>
+    <div class="text-xs text-slate-600 mb-1"><b>Top 部門：</b>${_chipList(byDept, 'bg-emerald-100 text-emerald-800')}</div>
+    <div class="text-xs text-slate-600"><b>Top 職務：</b>${_chipList(byTitle, 'bg-sky-100 text-sky-800')}</div>
+  `;
+}
+
 function renderResignTable() {
   const data = FILTERED.resignation_list;
+  const cntEl = document.getElementById('resign-count');
+  if (cntEl) cntEl.textContent = data.length;
+  _renderResignSummary(data);
   if (data.length === 0) {
     document.getElementById('resign-table').innerHTML = emptyState('此條件下無離職人員');
     return;
@@ -1874,6 +2141,9 @@ function gapColor(d) {
 
 function renderNewHireTable() {
   const data = FILTERED.new_hire_list;
+  const cntEl = document.getElementById('newhire-count');
+  if (cntEl) cntEl.textContent = data.length;
+  _renderNewHireSummary(data);
   if (data.length === 0) {
     document.getElementById('newhire-table').innerHTML = emptyState('此條件下無新進人員');
     return;

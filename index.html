@@ -336,12 +336,12 @@
         <div id="high-turnover-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
       </section>
 
-      <!-- 部門紅燈 -->
+      <!-- 部門流失與招募狀況（單表：彙總 + 各部門職缺展開明細） -->
       <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
           <h2 class="text-lg font-semibold">部門流失與招募狀況</h2>
           <div class="flex items-center gap-3">
-            <span class="text-xs text-slate-400">表格可上下捲動</span>
+            <span class="text-xs text-slate-400">點 ▸ 展開該部門職缺明細</span>
             <span class="src-note">來源：HRM + 召募達成率
               <span class="src-info" tabindex="0">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -350,40 +350,78 @@
                   <b>淨增減</b>：到職 − 離職<br>
                   <b>流失率</b>：離職 ÷ 該部門期初在職<br>
                   <b>新增/遞補職缺</b>：<code>2026年召募達成率.xlsx</code>，依部門名稱對應（含舊名轉新名）<br>
-                  <b>未補</b>：需求 − 已錄取
+                  <b>未補</b>：需求 − 已錄取<br>
+                  <b>展開列</b>：點部門名前的 ▸ 看該部門所屬職缺（職位/需求/已錄取/未補/類型/開缺日）
                 </span>
               </span>
             </span>
           </div>
         </div>
-        <div id="dept-table" class="overflow-auto max-h-[420px] border border-slate-100 rounded-lg"></div>
-      </section>
 
-      <!-- 職缺列表 -->
-      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold">招募職缺列表</h2>
-          <div class="flex items-center gap-3">
-            <span class="src-note">來源：召募達成率.xlsx
-              <span class="src-info" tabindex="0">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="src-tip">
-                  <b>來源</b>：<code>K:\HR-人資\3.召募離職\3.召募記錄表\2026\2026年召募達成率.xlsx</code><br>
-                  <b>讀取</b>：各月 sheet（01月～12月），跳過彙整表<br>
-                  <b>欄位</b>：事業單位 / 課別 / 職位 / 需求 / 開缺日 / 狀況 / 錄取 / 缺額<br>
-                  <b>合併儲存格</b>：事業單位 + 課別自動向上 forward-fill<br>
-                  <b>排除</b>：總計列 / 暫不列入 / 無職位
+        <!-- 篩選器 -->
+        <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
+          <label class="text-slate-500">事業單位</label>
+          <select id="dept-filter-biz" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+            <option value="">全部</option>
+          </select>
+          <label class="text-slate-500 ml-2">流失率</label>
+          <select id="dept-filter-turnover" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+            <option value="">全部</option>
+            <option value="high">高（≥30%）</option>
+            <option value="mid">中（15-30%）</option>
+            <option value="low">低（&lt;15% 且 &gt;0）</option>
+            <option value="zero">無離職</option>
+          </select>
+          <label class="text-slate-500 ml-2">招募缺額</label>
+          <select id="dept-filter-vacancy" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+            <option value="">全部</option>
+            <option value="has_open">有開缺</option>
+            <option value="pending">有未補</option>
+            <option value="filled">已全錄取</option>
+            <option value="none">無職缺</option>
+          </select>
+          <label class="text-slate-500 ml-2">職缺類型</label>
+          <select id="dept-filter-jobtype" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+            <option value="">全部</option>
+            <option value="新增">新增</option>
+            <option value="離職遞補">離職遞補</option>
+          </select>
+          <input id="dept-filter-keyword" type="text" placeholder="部門名稱搜尋" class="border border-slate-300 rounded px-2 py-1 w-40" oninput="renderDeptTable()">
+          <label class="ml-2 text-slate-500 flex items-center gap-1"><input type="checkbox" id="dept-filter-active-only" onchange="renderDeptTable()" class="mr-1">只看有異動</label>
+          <button class="ml-auto px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600" onclick="clearDeptFilters()">清除</button>
+          <span id="dept-filter-count" class="text-slate-500"></span>
+        </div>
+
+        <div id="dept-table" class="overflow-auto max-h-[640px] border border-slate-100 rounded-lg"></div>
+
+        <details class="group border-t border-slate-200 pt-4" style="display:none">
+          <summary class="cursor-pointer list-none flex items-center justify-between mb-3 select-none">
+            <h3 class="text-sm font-semibold text-slate-700">
+              📋 招募職缺逐筆明細
+              <span class="ml-2 text-xs font-normal text-slate-500 group-open:hidden">（共 <span id="pos-total-count" class="font-semibold text-slate-700">-</span> 筆，▸ 點此展開）</span>
+              <span class="ml-2 text-xs font-normal text-slate-500 hidden group-open:inline">▾ 收起</span>
+            </h3>
+            <div class="flex items-center gap-3" onclick="event.stopPropagation()">
+              <span class="src-note">來源：召募達成率.xlsx
+                <span class="src-info" tabindex="0">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span class="src-tip">
+                    <b>來源</b>：<code>K:\HR-人資\3.召募離職\3.召募記錄表\2026\2026年召募達成率.xlsx</code><br>
+                    <b>讀取</b>：各月 sheet（01月～12月），跳過彙整表<br>
+                    <b>欄位</b>：事業單位 / 課別 / 職位 / 需求 / 開缺日 / 狀況 / 錄取 / 缺額<br>
+                    <b>合併儲存格</b>：事業單位 + 課別自動向上 forward-fill<br>
+                    <b>排除</b>：總計列 / 暫不列入 / 無職位
+                  </span>
                 </span>
               </span>
-            </span>
-            <div class="flex gap-2 text-xs">
-              <button class="px-3 py-1 rounded-full bg-slate-100" onclick="filterJobType('')">全部</button>
-              <button class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700" onclick="filterJobType('新增')">新增</button>
-              <button class="px-3 py-1 rounded-full bg-amber-100 text-amber-700" onclick="filterJobType('離職遞補')">離職遞補</button>
+              <div class="flex gap-2 text-xs">
+                <button class="px-3 py-1 rounded-full bg-slate-100" onclick="filterJobType(''); event.stopPropagation()">全部</button>
+                <button class="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700" onclick="filterJobType('新增'); event.stopPropagation()">新增</button>
+                <button class="px-3 py-1 rounded-full bg-amber-100 text-amber-700" onclick="filterJobType('離職遞補'); event.stopPropagation()">離職遞補</button>
+              </div>
             </div>
-          </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
+          </summary>
+          <div class="flex flex-wrap items-center gap-2 mb-3 text-xs" onclick="event.stopPropagation()">
           <label class="text-slate-500">月份</label>
           <select id="pos-filter-month" class="border border-slate-300 rounded px-2 py-1" onchange="renderPositionsTable()">
             <option value="">全部</option>
@@ -407,7 +445,8 @@
           <button class="ml-auto px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600" onclick="clearPosFilters()">清除</button>
           <span id="pos-filter-count" class="text-slate-500"></span>
         </div>
-        <div id="positions-table" class="overflow-auto max-h-[420px] border border-slate-100 rounded-lg"></div>
+        <div id="positions-table" class="overflow-auto max-h-[420px] border border-slate-100 rounded-lg" style="display:none"></div>
+        </details>
       </section>
 
       </div><!-- /tab-flow -->
@@ -940,10 +979,11 @@
 
       <!-- 留停 / 異動 待追蹤 -->
       <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center justify-between mb-3">
           <h2 class="text-lg font-semibold flex items-center gap-2">
             <span class="inline-block w-2 h-2 bg-violet-500 rounded-full"></span>
             留停 / 異動 待追蹤
+            <span class="ml-2 text-xs font-normal text-slate-500">共 <span id="leave-tracking-count" class="font-semibold text-slate-700">-</span> 筆</span>
           </h2>
           <span class="src-note">來源：出勤總表「離職」頁簽
             <span class="src-info" tabindex="0">
@@ -951,32 +991,35 @@
               <span class="src-tip">
                 <b>定義</b>：細分類為「留職停薪」或「異動單位」的人員<br>
                 <b>狀態</b>：依「應復職日」與今日比對<br>
-                • 紅：已逾期復職日<br>
-                • 橘：30 天內即將復職<br>
-                • 藍：留停中<br>
-                • 灰：異動已轉新單位<br>
-                <b>用途</b>：避免 HR 漏追蹤復職日，造成「不報到=離職」
+                • 紅：已逾期復職日 • 橘：30 天內即將復職 • 藍：留停中 • 灰：異動已轉新單位
               </span>
             </span>
           </span>
         </div>
-        <div id="leave-tracking-table" class="overflow-auto max-h-[400px] border border-slate-100 rounded-lg"></div>
+        <div id="leave-tracking-summary" class="mb-3"></div>
+        <details class="group">
+          <summary class="cursor-pointer list-none text-xs text-slate-500 hover:text-slate-700 select-none mb-2">
+            <span class="group-open:hidden">▸ 展開人員明細（含姓名）</span>
+            <span class="hidden group-open:inline">▾ 收起明細</span>
+          </summary>
+          <div id="leave-tracking-table" class="overflow-auto max-h-[400px] border border-slate-100 rounded-lg"></div>
+        </details>
       </section>
 
       <!-- 三欄: 短期離職警示 + 離職清單 + 新進清單 -->
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h2 class="text-lg font-semibold flex items-center gap-2">
               <span class="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
               短期離職警示
+              <span class="ml-2 text-xs font-normal text-slate-500">共 <span id="short-term-count" class="font-semibold text-slate-700">-</span> 筆</span>
               <span class="src-info" tabindex="0">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span class="src-tip">
                   <b>定義</b>：在職天數 &lt; 90 天的離職者<br>
                   <b>來源</b>：HRM 離職清單<br>
-                  <b>原因欄</b>：個人因素/個人問題隱藏；資遣/解雇/留停以紅字顯示<br>
-                  <b>用途</b>：警示 90 天內留不住人的單位
+                  <b>原因欄</b>：個人因素/個人問題隱藏；資遣/解雇/留停以紅字顯示
                 </span>
               </span>
             </h2>
@@ -985,11 +1028,21 @@
             </select>
           </div>
           <p class="text-xs text-slate-500 mb-2">判斷標準：在職天數 &lt; 90 天</p>
-          <div id="short-term-table" class="overflow-x-auto max-h-[600px] overflow-y-auto"></div>
+          <div id="short-term-summary" class="mb-3"></div>
+          <details class="group">
+            <summary class="cursor-pointer list-none text-xs text-slate-500 hover:text-slate-700 select-none mb-2">
+              <span class="group-open:hidden">▸ 展開人員明細（含姓名）</span>
+              <span class="hidden group-open:inline">▾ 收起明細</span>
+            </summary>
+            <div id="short-term-table" class="overflow-x-auto max-h-[600px] overflow-y-auto"></div>
+          </details>
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">離職清單</h2>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">
+              離職清單
+              <span class="ml-2 text-xs font-normal text-slate-500">共 <span id="resign-count" class="font-semibold text-slate-700">-</span> 筆</span>
+            </h2>
             <span class="src-info" tabindex="0">
               <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span class="src-tip">
@@ -999,21 +1052,37 @@
               </span>
             </span>
           </div>
-          <div id="resign-table" class="overflow-x-auto max-h-[600px] overflow-y-auto"></div>
+          <div id="resign-summary" class="mb-3"></div>
+          <details class="group">
+            <summary class="cursor-pointer list-none text-xs text-slate-500 hover:text-slate-700 select-none mb-2">
+              <span class="group-open:hidden">▸ 展開人員明細（含姓名）</span>
+              <span class="hidden group-open:inline">▾ 收起明細</span>
+            </summary>
+            <div id="resign-table" class="overflow-x-auto max-h-[600px] overflow-y-auto"></div>
+          </details>
         </div>
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">新進人員</h2>
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">
+              新進人員
+              <span class="ml-2 text-xs font-normal text-slate-500">共 <span id="newhire-count" class="font-semibold text-slate-700">-</span> 筆</span>
+            </h2>
             <span class="src-info" tabindex="0">
               <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span class="src-tip">
                 <b>來源</b>：HRM 在職清單（2026 起到職者）+ 已離職但 2026 入職者<br>
-                <b>區間</b>：依目前篩選的月份範圍取「到職日」<br>
-                <b>合併</b>：同工號以「已離職」覆寫「在職」（避免重複）
+                <b>區間</b>：依目前篩選的月份範圍取「到職日」
               </span>
             </span>
           </div>
-          <div id="newhire-table" class="overflow-x-auto max-h-[600px] overflow-y-auto"></div>
+          <div id="newhire-summary" class="mb-3"></div>
+          <details class="group">
+            <summary class="cursor-pointer list-none text-xs text-slate-500 hover:text-slate-700 select-none mb-2">
+              <span class="group-open:hidden">▸ 展開人員明細（含姓名）</span>
+              <span class="hidden group-open:inline">▾ 收起明細</span>
+            </summary>
+            <div id="newhire-table" class="overflow-x-auto max-h-[600px] overflow-y-auto"></div>
+          </details>
         </div>
       </section>
 
