@@ -358,42 +358,8 @@
           </div>
         </div>
 
-        <!-- 篩選器 -->
-        <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
-          <label class="text-slate-500">事業單位</label>
-          <select id="dept-filter-biz" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
-            <option value="">全部</option>
-          </select>
-          <label class="text-slate-500 ml-2">流失率</label>
-          <select id="dept-filter-turnover" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
-            <option value="">全部</option>
-            <option value="high">高（≥30%）</option>
-            <option value="mid">中（15-30%）</option>
-            <option value="low">低（&lt;15% 且 &gt;0）</option>
-            <option value="zero">無離職</option>
-          </select>
-          <label class="text-slate-500 ml-2">招募缺額</label>
-          <select id="dept-filter-vacancy" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
-            <option value="">全部</option>
-            <option value="has_open">有開缺</option>
-            <option value="pending">有未補</option>
-            <option value="filled">已全錄取</option>
-            <option value="none">無職缺</option>
-          </select>
-          <label class="text-slate-500 ml-2">職缺類型</label>
-          <select id="dept-filter-jobtype" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
-            <option value="">全部</option>
-            <option value="新增">新增</option>
-            <option value="離職遞補">離職遞補</option>
-          </select>
-          <input id="dept-filter-keyword" type="text" placeholder="部門名稱搜尋" class="border border-slate-300 rounded px-2 py-1 w-40" oninput="renderDeptTable()">
-          <label class="ml-2 text-slate-500 flex items-center gap-1"><input type="checkbox" id="dept-filter-active-only" onchange="renderDeptTable()" class="mr-1">只看有異動</label>
-          <button class="ml-auto px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600" onclick="clearDeptFilters()">清除</button>
-          <span id="dept-filter-count" class="text-slate-500"></span>
-        </div>
-
-        <!-- 篩選=全部時的圓餅總覽（隱藏 dept-table 用） -->
-        <div id="dept-pies" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3 hidden">
+        <!-- 上方：兩個圓餅總覽（常駐） -->
+        <div id="dept-pies" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div class="border border-slate-200 rounded-lg p-3 bg-slate-50">
             <div class="text-sm font-semibold text-slate-700 mb-2">離職人數 by 事業單位</div>
             <div style="position:relative; height:280px;"><canvas id="chart-dept-resign-pie"></canvas></div>
@@ -404,7 +370,44 @@
           </div>
         </div>
 
-        <div id="dept-table" class="overflow-auto max-h-[640px] border border-slate-100 rounded-lg"></div>
+        <!-- 下方：Excel-style 職缺平面表 -->
+        <div class="border-t border-slate-200 pt-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-slate-700">📋 招募職缺明細（仿召募達成率.xlsx 格式）</h3>
+            <span class="text-xs text-slate-500">錄取數依 ATS pre_employees 為準</span>
+          </div>
+          <!-- 篩選器 -->
+          <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
+            <label class="text-slate-500">月份</label>
+            <select id="dept-filter-month" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+              <option value="">全部</option>
+            </select>
+            <label class="text-slate-500 ml-2">事業單位</label>
+            <select id="dept-filter-biz" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+              <option value="">全部</option>
+            </select>
+            <label class="text-slate-500 ml-2">課別</label>
+            <select id="dept-filter-course" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+              <option value="">全部</option>
+            </select>
+            <label class="text-slate-500 ml-2">職缺類型</label>
+            <select id="dept-filter-jobtype" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+              <option value="">全部</option>
+              <option value="新增">新增</option>
+              <option value="離職遞補">離職遞補</option>
+            </select>
+            <label class="text-slate-500 ml-2">缺額狀態</label>
+            <select id="dept-filter-vacancy" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
+              <option value="">全部</option>
+              <option value="pending">有未補</option>
+              <option value="filled">已全錄取</option>
+            </select>
+            <input id="dept-filter-keyword" type="text" placeholder="職位搜尋" class="border border-slate-300 rounded px-2 py-1 w-40" oninput="renderDeptTable()">
+            <button class="ml-auto px-3 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-600" onclick="clearDeptFilters()">清除</button>
+            <span id="dept-filter-count" class="text-slate-500"></span>
+          </div>
+          <div id="dept-table" class="overflow-auto max-h-[640px] border border-slate-100 rounded-lg"></div>
+        </div>
 
         <details class="group border-t border-slate-200 pt-4" style="display:none">
           <summary class="cursor-pointer list-none flex items-center justify-between mb-3 select-none">
@@ -1040,6 +1043,16 @@
             </select>
           </div>
           <p class="text-xs text-slate-500 mb-2">判斷標準：在職天數 &lt; 90 天</p>
+          <div id="short-term-pies" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+            <div class="border border-slate-200 rounded p-2 bg-slate-50">
+              <div class="text-[11px] text-slate-600 mb-1">by 部門</div>
+              <div style="position:relative; height:180px;"><canvas id="chart-shortterm-dept-pie"></canvas></div>
+            </div>
+            <div class="border border-slate-200 rounded p-2 bg-slate-50">
+              <div class="text-[11px] text-slate-600 mb-1">by 離職原因</div>
+              <div style="position:relative; height:180px;"><canvas id="chart-shortterm-reason-pie"></canvas></div>
+            </div>
+          </div>
           <div id="short-term-summary" class="mb-3"></div>
           <details class="group">
             <summary class="cursor-pointer list-none text-xs text-slate-500 hover:text-slate-700 select-none mb-2">
@@ -1064,6 +1077,16 @@
               </span>
             </span>
           </div>
+          <div id="resign-pies" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+            <div class="border border-slate-200 rounded p-2 bg-slate-50">
+              <div class="text-[11px] text-slate-600 mb-1">by 離職原因</div>
+              <div style="position:relative; height:180px;"><canvas id="chart-resign-reason-pie"></canvas></div>
+            </div>
+            <div class="border border-slate-200 rounded p-2 bg-slate-50">
+              <div class="text-[11px] text-slate-600 mb-1">by 部門</div>
+              <div style="position:relative; height:180px;"><canvas id="chart-resign-dept-pie"></canvas></div>
+            </div>
+          </div>
           <div id="resign-summary" class="mb-3"></div>
           <details class="group">
             <summary class="cursor-pointer list-none text-xs text-slate-500 hover:text-slate-700 select-none mb-2">
@@ -1086,6 +1109,16 @@
                 <b>區間</b>：依目前篩選的月份範圍取「到職日」
               </span>
             </span>
+          </div>
+          <div id="newhire-pies" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+            <div class="border border-slate-200 rounded p-2 bg-slate-50">
+              <div class="text-[11px] text-slate-600 mb-1">by 部門</div>
+              <div style="position:relative; height:180px;"><canvas id="chart-newhire-dept-pie"></canvas></div>
+            </div>
+            <div class="border border-slate-200 rounded p-2 bg-slate-50">
+              <div class="text-[11px] text-slate-600 mb-1">by 職務</div>
+              <div style="position:relative; height:180px;"><canvas id="chart-newhire-title-pie"></canvas></div>
+            </div>
           </div>
           <div id="newhire-summary" class="mb-3"></div>
           <details class="group">

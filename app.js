@@ -1537,12 +1537,10 @@ function renderHighTurnoverFocus() {
 }
 
 function clearDeptFilters() {
-  ['dept-filter-biz','dept-filter-turnover','dept-filter-vacancy','dept-filter-jobtype','dept-filter-keyword'].forEach(id => {
+  ['dept-filter-month','dept-filter-biz','dept-filter-course','dept-filter-jobtype','dept-filter-vacancy','dept-filter-keyword'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  const ck = document.getElementById('dept-filter-active-only');
-  if (ck) ck.checked = false;
   renderDeptTable();
 }
 
@@ -1564,11 +1562,30 @@ function _deptBizMap() {
 
 function _populateDeptBizFilter() {
   const sel = document.getElementById('dept-filter-biz');
-  if (!sel) return;
-  const bizs = [...new Set((FILTERED.open_positions || []).map(p => p.biz).filter(Boolean))].sort();
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">全部</option>' +
-    bizs.map(b => `<option value="${escapeAttr(b)}"${b === cur ? ' selected' : ''}>${b}</option>`).join('');
+  if (sel) {
+    const bizs = [...new Set((FILTERED.open_positions || []).map(p => p.biz).filter(Boolean))].sort();
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">全部</option>' +
+      bizs.map(b => `<option value="${escapeAttr(b)}"${b === cur ? ' selected' : ''}>${b}</option>`).join('');
+  }
+  // 月份
+  const monSel = document.getElementById('dept-filter-month');
+  if (monSel) {
+    const months = [...new Set((FILTERED.open_positions || []).map(p => p.month).filter(Boolean))].sort((a, b) => a - b);
+    const cur = monSel.value;
+    monSel.innerHTML = '<option value="">全部</option>' +
+      months.map(m => `<option value="${m}"${String(m) === cur ? ' selected' : ''}>${m}月</option>`).join('');
+  }
+  // 課別（依事業單位連動）
+  const courseSel = document.getElementById('dept-filter-course');
+  if (courseSel) {
+    const bizFilter = document.getElementById('dept-filter-biz')?.value || '';
+    const pool = (FILTERED.open_positions || []).filter(p => !bizFilter || p.biz === bizFilter);
+    const courses = [...new Set(pool.map(p => p.course).filter(Boolean))].sort();
+    const cur = courseSel.value;
+    courseSel.innerHTML = '<option value="">全部</option>' +
+      courses.map(c => `<option value="${escapeAttr(c)}"${c === cur ? ' selected' : ''}>${c}</option>`).join('');
+  }
 }
 
 function _renderDeptJobsSubTable(jobs) {
@@ -1655,12 +1672,88 @@ function _renderDeptPies() {
 
 function renderDeptTable() {
   _populateDeptBizFilter();
-  const bizMap = _deptBizMap();
+  // 圓餅常駐顯示
+  _renderDeptPies();
+  // Excel-style 平面職缺表
+  const monthFilter = document.getElementById('dept-filter-month')?.value || '';
   const bizFilter = document.getElementById('dept-filter-biz')?.value || '';
-  // 全部時顯示圓餅；篩特定單位時隱藏圓餅
-  const pies = document.getElementById('dept-pies');
-  if (pies) pies.classList.toggle('hidden', !!bizFilter);
-  if (!bizFilter) _renderDeptPies();
+  const courseFilter = document.getElementById('dept-filter-course')?.value || '';
+  const jobTypeFilter = document.getElementById('dept-filter-jobtype')?.value || '';
+  const vacancyFilter = document.getElementById('dept-filter-vacancy')?.value || '';
+  const kw = (document.getElementById('dept-filter-keyword')?.value || '').trim().toLowerCase();
+
+  let data = [...(FILTERED.open_positions || [])];
+  if (monthFilter) data = data.filter(p => String(p.month) === monthFilter);
+  if (bizFilter) data = data.filter(p => p.biz === bizFilter);
+  if (courseFilter) data = data.filter(p => p.course === courseFilter);
+  if (jobTypeFilter) data = data.filter(p => p.type === jobTypeFilter);
+  if (vacancyFilter === 'pending') data = data.filter(p => (p.pending || 0) > 0);
+  if (vacancyFilter === 'filled') data = data.filter(p => (p.pending || 0) === 0 && (p.demand || 0) > 0);
+  if (kw) data = data.filter(p => (p.position || '').toLowerCase().includes(kw));
+  data.sort((a, b) => (a.month || 99) - (b.month || 99) || (a.biz || '').localeCompare(b.biz || '') || (a.course || '').localeCompare(b.course || ''));
+
+  const cntEl = document.getElementById('dept-filter-count');
+  if (cntEl) cntEl.textContent = `（共 ${data.length} 筆職缺 / 需求 ${data.reduce((s,p)=>s+(p.demand||0),0)} / 已錄取 ${data.reduce((s,p)=>s+(p.hired||0),0)}）`;
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const fmtRate = (h, d) => {
+    if (!d) return '-';
+    const r = Math.round((h || 0) / d * 100);
+    const cls = r >= 100 ? 'text-emerald-700 font-semibold' : r >= 50 ? 'text-amber-700' : 'text-red-700';
+    return `<span class="${cls}">${r}%</span>`;
+  };
+  const typeBadge = (t) => {
+    if (t === '新增') return '<span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">新增</span>';
+    if (t === '離職遞補') return '<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">離職遞補</span>';
+    return '<span class="text-[10px] text-slate-400">-</span>';
+  };
+  const atsTag = (p) => {
+    if (p.ats_only) return '<span class="ml-1 text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-700" title="ATS 有此職缺但 Excel 未列">ATS</span>';
+    if (p.hired_excel !== undefined && p.hired_excel !== null && p.hired_excel !== p.hired_ats) {
+      return `<span class="ml-1 text-[10px] text-slate-400" title="Excel 原填 ${p.hired_excel}">(Excel:${p.hired_excel})</span>`;
+    }
+    return '';
+  };
+  const rows = data.map(p => `
+    <tr class="border-t border-slate-100 hover:bg-slate-50">
+      <td class="px-3 py-1.5 text-xs text-slate-500 whitespace-nowrap">${p.month ? p.month + '月' : '-'}</td>
+      <td class="px-3 py-1.5 text-sm">${esc(p.biz)}</td>
+      <td class="px-3 py-1.5 text-sm">${esc(p.course || '-')}</td>
+      <td class="px-3 py-1.5 text-sm">${esc(p.position)}</td>
+      <td class="px-3 py-1.5">${typeBadge(p.type)}</td>
+      <td class="px-3 py-1.5 text-right text-sm">${p.demand || 0}</td>
+      <td class="px-3 py-1.5 text-right text-sm text-emerald-700 font-medium">${p.hired || 0}${atsTag(p)}</td>
+      <td class="px-3 py-1.5 text-right text-sm">${fmtRate(p.hired, p.demand)}</td>
+      <td class="px-3 py-1.5 text-right text-sm ${(p.pending||0)>0 ? 'text-amber-600 font-semibold' : 'text-slate-400'}">${p.pending || 0}</td>
+      <td class="px-3 py-1.5 text-xs text-slate-500 whitespace-nowrap">${esc(p.open_dt || '-')}</td>
+    </tr>`).join('');
+
+  const html = `
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-50 sticky top-0 z-10">
+        <tr class="text-xs text-slate-600">
+          <th class="text-left px-3 py-2">月份</th>
+          <th class="text-left px-3 py-2">事業單位</th>
+          <th class="text-left px-3 py-2">課別</th>
+          <th class="text-left px-3 py-2">職位</th>
+          <th class="text-left px-3 py-2">職缺類型</th>
+          <th class="text-right px-3 py-2">需求</th>
+          <th class="text-right px-3 py-2">已錄取</th>
+          <th class="text-right px-3 py-2">達成率</th>
+          <th class="text-right px-3 py-2">缺額</th>
+          <th class="text-left px-3 py-2">開缺日</th>
+        </tr>
+      </thead>
+      <tbody>${rows || '<tr><td colspan="10" class="text-center text-slate-400 py-6">無符合條件的職缺</td></tr>'}</tbody>
+    </table>
+  `;
+  document.getElementById('dept-table').innerHTML = html;
+}
+
+// ============== 舊版 dept aggregate table 已下架，以下函式保留為空殼 ==============
+function _renderDeptJobsSubTable() { return ''; }
+function toggleDeptJobs() {}
+function _OLD_renderDeptTable_unused() {
   const turnoverFilter = document.getElementById('dept-filter-turnover')?.value || '';
   const vacancyFilter = document.getElementById('dept-filter-vacancy')?.value || '';
   const jobTypeFilter = document.getElementById('dept-filter-jobtype')?.value || '';
@@ -1874,6 +1967,43 @@ function renderPositionsTable() {
 
 // ===== 聚合摘要區塊（取代主畫面人名表）=====
 
+// 共用 pie 渲染：當 dept filter 為「全部」時顯示，篩特定部門時隱藏改顯示 chip
+const _IND_PIE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#94a3b8','#fb923c'];
+const _indPies = {}; // canvasId → Chart instance
+
+function _renderIndicatorPie(canvasId, dataMap, topN=8) {
+  const cv = document.getElementById(canvasId);
+  if (!cv) return;
+  if (_indPies[canvasId]) { _indPies[canvasId].destroy(); _indPies[canvasId] = null; }
+  const arr = Object.entries(dataMap).filter(([k, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  if (!arr.length) {
+    cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
+    return;
+  }
+  let top = arr;
+  if (arr.length > topN) {
+    top = arr.slice(0, topN);
+    const otherSum = arr.slice(topN).reduce((s, x) => s + x[1], 0);
+    if (otherSum > 0) top.push(['其他', otherSum]);
+  }
+  const total = top.reduce((s, x) => s + x[1], 0);
+  _indPies[canvasId] = new Chart(cv, {
+    type: 'doughnut',
+    data: { labels: top.map(x => x[0]), datasets: [{ data: top.map(x => x[1]), backgroundColor: _IND_PIE_COLORS, borderWidth: 1 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 8, font: { size: 10 } } },
+        tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed} (${Math.round(c.parsed / total * 100)}%)` } },
+      },
+    },
+  });
+}
+
+function _isDeptFilterAll() {
+  return !(document.getElementById('filter-dept')?.value || '');
+}
+
 function _countBy(arr, key, topN) {
   const m = {};
   arr.forEach(x => { const k = (x[key] || '(未填)').trim() || '(未填)'; m[k] = (m[k] || 0) + 1; });
@@ -1922,8 +2052,25 @@ function _renderLeaveTrackingSummary(data) {
 
 function _renderShortTermSummary(data) {
   const wrap = document.getElementById('short-term-summary');
+  const pies = document.getElementById('short-term-pies');
   if (!wrap) return;
-  if (!data.length) { wrap.innerHTML = '<div class="text-xs text-slate-400">無短期離職人員</div>'; return; }
+  if (!data.length) {
+    wrap.innerHTML = '<div class="text-xs text-slate-400">無短期離職人員</div>';
+    if (pies) pies.classList.add('hidden');
+    return;
+  }
+  // 全部部門時顯示 pie，篩特定部門時顯示 chip
+  const showPie = _isDeptFilterAll();
+  if (pies) pies.classList.toggle('hidden', !showPie);
+  if (showPie) {
+    const deptMap = {}, reasonMap = {};
+    data.forEach(r => {
+      const d = r.dept || '(未填)'; deptMap[d] = (deptMap[d]||0)+1;
+      const re = r.reason || '(未填)'; reasonMap[re] = (reasonMap[re]||0)+1;
+    });
+    _renderIndicatorPie('chart-shortterm-dept-pie', deptMap, 8);
+    _renderIndicatorPie('chart-shortterm-reason-pie', reasonMap, 8);
+  }
   const byDept = _countBy(data, 'dept', 5);
   const byReason = _countBy(data, 'reason', 5);
   const within7 = data.filter(r => (r.tenure_days || 0) <= 7).length;
@@ -1943,15 +2090,29 @@ function _renderShortTermSummary(data) {
         <div class="text-lg font-bold text-slate-700">${data.length}</div>
       </div>
     </div>
+    ${showPie ? '' : `
     <div class="text-xs text-slate-600 mb-1"><b>Top 部門：</b>${_chipList(byDept, 'bg-rose-100 text-rose-800')}</div>
     <div class="text-xs text-slate-600"><b>Top 原因：</b>${_chipList(byReason, 'bg-orange-100 text-orange-800')}</div>
+    `}
   `;
 }
 
 function _renderResignSummary(data) {
   const wrap = document.getElementById('resign-summary');
+  const pies = document.getElementById('resign-pies');
   if (!wrap) return;
-  if (!data.length) { wrap.innerHTML = ''; return; }
+  if (!data.length) { wrap.innerHTML = ''; if (pies) pies.classList.add('hidden'); return; }
+  const showPie = _isDeptFilterAll();
+  if (pies) pies.classList.toggle('hidden', !showPie);
+  if (showPie) {
+    const reasonMap = {}, deptMap = {};
+    data.forEach(r => {
+      const re = r.reason || '(未填)'; reasonMap[re] = (reasonMap[re]||0)+1;
+      const d = r.dept || '(未填)'; deptMap[d] = (deptMap[d]||0)+1;
+    });
+    _renderIndicatorPie('chart-resign-reason-pie', reasonMap, 8);
+    _renderIndicatorPie('chart-resign-dept-pie', deptMap, 8);
+  }
   const byReason = _countBy(data, 'reason', 6);
   const byDept = _countBy(data, 'dept', 5);
   const totalDays = data.reduce((s, r) => s + (r.tenure_days || 0), 0);
@@ -1967,15 +2128,29 @@ function _renderResignSummary(data) {
         <div class="text-lg font-bold text-slate-700">${avgTen} 月</div>
       </div>
     </div>
+    ${showPie ? '' : `
     <div class="text-xs text-slate-600 mb-1"><b>離職原因：</b>${_chipList(byReason, 'bg-red-100 text-red-800')}</div>
     <div class="text-xs text-slate-600"><b>Top 部門：</b>${_chipList(byDept, 'bg-rose-100 text-rose-800')}</div>
+    `}
   `;
 }
 
 function _renderNewHireSummary(data) {
   const wrap = document.getElementById('newhire-summary');
+  const pies = document.getElementById('newhire-pies');
   if (!wrap) return;
-  if (!data.length) { wrap.innerHTML = ''; return; }
+  if (!data.length) { wrap.innerHTML = ''; if (pies) pies.classList.add('hidden'); return; }
+  const showPie = _isDeptFilterAll();
+  if (pies) pies.classList.toggle('hidden', !showPie);
+  if (showPie) {
+    const deptMap = {}, titleMap = {};
+    data.forEach(r => {
+      const d = r.dept || '(未填)'; deptMap[d] = (deptMap[d]||0)+1;
+      const t = r.title || '(未填)'; titleMap[t] = (titleMap[t]||0)+1;
+    });
+    _renderIndicatorPie('chart-newhire-dept-pie', deptMap, 8);
+    _renderIndicatorPie('chart-newhire-title-pie', titleMap, 8);
+  }
   const byDept = _countBy(data, 'dept', 5);
   const byTitle = _countBy(data, 'title', 5);
   const active = data.filter(r => r.still_active).length;
@@ -1995,8 +2170,10 @@ function _renderNewHireSummary(data) {
         <div class="text-lg font-bold text-slate-700">${data.length}</div>
       </div>
     </div>
+    ${showPie ? '' : `
     <div class="text-xs text-slate-600 mb-1"><b>Top 部門：</b>${_chipList(byDept, 'bg-emerald-100 text-emerald-800')}</div>
     <div class="text-xs text-slate-600"><b>Top 職務：</b>${_chipList(byTitle, 'bg-sky-100 text-sky-800')}</div>
+    `}
   `;
 }
 
