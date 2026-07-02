@@ -1744,16 +1744,16 @@ function renderDeptTable() {
     </tr>`).join('');
 
   const html = `
-    <table class="text-sm" style="width:100%; table-layout:fixed;">
+    <table class="text-sm" style="width:auto; table-layout:fixed;">
       <colgroup>
         <col style="width:56px;">
         <col style="width:130px;">
         <col style="width:150px;">
-        <col>
-        <col style="width:72px;">
-        <col style="width:100px;">
-        <col style="width:72px;">
+        <col style="width:300px;">
         <col style="width:64px;">
+        <col style="width:90px;">
+        <col style="width:70px;">
+        <col style="width:60px;">
       </colgroup>
       <thead class="bg-slate-50 sticky top-0 z-10">
         <tr class="text-xs text-slate-600">
@@ -1994,7 +1994,7 @@ function renderPositionsTable() {
 const _IND_PIE_COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#ec4899','#94a3b8','#fb923c'];
 const _indPies = {}; // canvasId → Chart instance
 
-function _renderIndicatorPie(canvasId, dataMap, topN=8) {
+function _renderIndicatorPie(canvasId, dataMap, topN=5) {
   const cv = document.getElementById(canvasId);
   if (!cv) return;
   if (_indPies[canvasId]) { _indPies[canvasId].destroy(); _indPies[canvasId] = null; }
@@ -2003,12 +2003,8 @@ function _renderIndicatorPie(canvasId, dataMap, topN=8) {
     cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
     return;
   }
-  let top = arr;
-  if (arr.length > topN) {
-    top = arr.slice(0, topN);
-    const otherSum = arr.slice(topN).reduce((s, x) => s + x[1], 0);
-    if (otherSum > 0) top.push(['其他', otherSum]);
-  }
+  // 只顯示前 topN 名，其餘直接丟掉（不再彙總「其他」）
+  const top = arr.slice(0, topN);
   const total = top.reduce((s, x) => s + x[1], 0);
   _indPies[canvasId] = new Chart(cv, {
     type: 'doughnut',
@@ -2107,7 +2103,7 @@ function _renderShortTermSummary(data) {
     _renderIndicatorPie('chart-shortterm-dept-pie', deptMap, 5);
     _renderIndicatorPie('chart-shortterm-reason-pie', reasonMap, 5);
     // 在職天數分段圖：全部 6 段都秀（分段本身就有排序意義，用 topN=99 避免被裁）
-    _renderIndicatorPie('chart-shortterm-tenure-pie', tenureMap, 99);
+    _renderIndicatorPie('chart-shortterm-tenure-pie', tenureMap, 5);
   }
   const byDept = _countBy(data, 'dept', 5);
   const byReason = _countBy(data, 'reason', 5);
@@ -2165,7 +2161,7 @@ function _renderResignSummary(data) {
     });
     _renderIndicatorPie('chart-resign-reason-pie', reasonMap, 5);
     _renderIndicatorPie('chart-resign-dept-pie', deptMap, 5);
-    _renderIndicatorPie('chart-resign-tenure-pie', tenureMap, 99);
+    _renderIndicatorPie('chart-resign-tenure-pie', tenureMap, 5);
   }
   const byReason = _countBy(data, 'reason', 6);
   const byDept = _countBy(data, 'dept', 5);
