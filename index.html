@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>大豐 Recruit Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -136,66 +139,6 @@
         <canvas id="chart-monthly" height="80"></canvas>
       </section>
 
-      <!-- 三欄圖表: 年資分布 / 離職原因 / 短期離職單位 -->
-      <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">離職年資分布</h2>
-            <span class="src-note">來源：HRM 離職清單
-              <span class="src-info" tabindex="0">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="src-tip">
-                  <b>計算</b>：年資 = 離職日 − 到職日<br>
-                  <b>分箱</b>：&lt;30天 / 1-3個月 / 3-6個月 / 6-12個月 / 1-3年 / 3-5年 / 5年+<br>
-                  <b>排除</b>：離職日早於入職日（疑似前職離職日誤填）
-                </span>
-              </span>
-            </span>
-          </div>
-          <div style="position:relative; height:320px;">
-            <canvas id="chart-tenure"></canvas>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">離職原因分布</h2>
-            <span class="src-note">來源：HRM 離職清單 O 欄
-              <span class="src-info" tabindex="0">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="src-tip">
-                  <b>分類規則</b>（依 O 欄主分類）<br>
-                  • 期滿/屆滿/合約 → 細分工讀生/移工/合約期滿<br>
-                  • 異動 → 排除（非離職）<br>
-                  • 留停 → 排除（人還在）<br>
-                  • 曠職、資遣、個人因素… 依字串歸類
-                </span>
-              </span>
-            </span>
-          </div>
-          <div style="position:relative; height:320px;">
-            <canvas id="chart-reasons"></canvas>
-          </div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold">短期離職單位統計</h2>
-            <span class="src-note">短期離職 ÷ 部門
-              <span class="src-info" tabindex="0">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="src-tip">
-                  <b>定義</b>：在職天數 &lt; 90 天的離職者<br>
-                  <b>來源</b>：HRM 離職清單<br>
-                  <b>聚合</b>：依離職時所屬部門 group
-                </span>
-              </span>
-            </span>
-          </div>
-          <div style="position:relative; height:320px;">
-            <canvas id="chart-shortterm-dept"></canvas>
-          </div>
-        </div>
-      </section>
-
       <!-- 遞補空窗分析 -->
       <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div class="flex items-center justify-between mb-4">
@@ -249,24 +192,7 @@
             <canvas id="chart-backfill-dist" height="160"></canvas>
           </div>
         </div>
-        <details class="border-t border-slate-200 pt-4">
-          <summary class="cursor-pointer text-sm font-medium text-slate-700 hover:text-slate-900">查看離職 → 遞補配對明細</summary>
-          <div class="flex items-center gap-3 mt-3 flex-wrap">
-            <label class="text-xs text-slate-500">狀態</label>
-            <select id="filter-backfill-status" class="text-xs border border-slate-300 rounded px-2 py-1" onchange="renderBackfillAnalysis()">
-              <option value="">全部</option>
-              <option value="ALL_MATCHED">已遞補（含提前補位）</option>
-              <option value="已遞補">僅「已遞補」</option>
-              <option value="提前補位">僅「提前補位」</option>
-              <option value="未遞補">未遞補</option>
-            </select>
-            <label class="text-xs text-slate-500 ml-2">部門</label>
-            <select id="filter-backfill-dept" class="text-xs border border-slate-300 rounded px-2 py-1" onchange="renderBackfillAnalysis()">
-              <option value="">全部</option>
-            </select>
-          </div>
-          <div id="backfill-detail-table" class="overflow-auto max-h-[420px] border border-slate-100 rounded-lg mt-3"></div>
-        </details>
+        <!-- 遞補配對明細 已搬到「部門流失與招募狀況」section 內，跟招募職缺明細並列 -->
       </section>
 
       <!-- 年度離職率對比 -->
@@ -358,24 +284,24 @@
           </div>
         </div>
 
-        <!-- 上方：兩個圓餅總覽（常駐） -->
-        <div id="dept-pies" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div class="border border-slate-200 rounded-lg p-3 bg-slate-50">
-            <div class="text-sm font-semibold text-slate-700 mb-2">離職人數 by 事業單位</div>
-            <div style="position:relative; height:280px;"><canvas id="chart-dept-resign-pie"></canvas></div>
-          </div>
-          <div class="border border-slate-200 rounded-lg p-3 bg-slate-50">
+        <!-- 上方：未補職缺圓餅（唯一，招募端視角，不與「離職清單」pie 重複） -->
+        <div id="dept-pies" class="mb-4">
+          <div class="border border-slate-200 rounded-lg p-3 bg-slate-50 max-w-2xl mx-auto">
             <div class="text-sm font-semibold text-slate-700 mb-2">未補職缺 by 事業單位</div>
             <div style="position:relative; height:280px;"><canvas id="chart-dept-pending-pie"></canvas></div>
           </div>
         </div>
 
-        <!-- 下方：Excel-style 職缺平面表 -->
-        <div class="border-t border-slate-200 pt-4">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-semibold text-slate-700">📋 招募職缺明細（仿召募達成率.xlsx 格式）</h3>
-            <span class="text-xs text-slate-500">錄取數依 ATS pre_employees 為準</span>
-          </div>
+        <!-- 下方：Excel-style 職缺平面表（摺疊，預設收起，資料源：召募達成率.xlsx H欄「職缺狀況」為類型） -->
+        <details class="border-t border-slate-200 pt-4 group">
+          <summary class="cursor-pointer list-none flex items-center justify-between mb-3 select-none">
+            <h3 class="text-sm font-semibold text-slate-700">
+              📋 招募職缺明細（仿召募達成率.xlsx 格式）
+              <span class="ml-2 text-xs font-normal text-slate-500 group-open:hidden">▸ 點此展開</span>
+              <span class="ml-2 text-xs font-normal text-slate-500 hidden group-open:inline">▾ 收起</span>
+            </h3>
+            <span class="text-xs text-slate-500">錄取數以 ATS pre_employees 為準；類型欄=Excel H欄「職缺狀況」</span>
+          </summary>
           <!-- 篩選器 -->
           <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
             <label class="text-slate-500">月份</label>
@@ -390,12 +316,6 @@
             <select id="dept-filter-course" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
               <option value="">全部</option>
             </select>
-            <label class="text-slate-500 ml-2">職缺類型</label>
-            <select id="dept-filter-jobtype" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
-              <option value="">全部</option>
-              <option value="新增">新增</option>
-              <option value="離職遞補">離職遞補</option>
-            </select>
             <label class="text-slate-500 ml-2">缺額狀態</label>
             <select id="dept-filter-vacancy" class="border border-slate-300 rounded px-2 py-1" onchange="renderDeptTable()">
               <option value="">全部</option>
@@ -407,7 +327,34 @@
             <span id="dept-filter-count" class="text-slate-500"></span>
           </div>
           <div id="dept-table" class="overflow-auto max-h-[640px] border border-slate-100 rounded-lg"></div>
-        </div>
+        </details>
+
+        <!-- 遞補配對明細（併入本區塊，跟招募職缺明細對照）-->
+        <details class="border-t border-slate-200 pt-4 mt-4 group">
+          <summary class="cursor-pointer list-none flex items-center justify-between mb-3 select-none">
+            <h3 class="text-sm font-semibold text-slate-700">
+              🔁 離職 → 遞補配對明細
+              <span class="ml-2 text-xs font-normal text-slate-500 group-open:hidden">▸ 點此展開</span>
+              <span class="ml-2 text-xs font-normal text-slate-500 hidden group-open:inline">▾ 收起</span>
+            </h3>
+            <span class="text-xs text-slate-500">配對規則：同部門 + 新人到職 ≤ 離職+90 天</span>
+          </summary>
+          <div class="flex items-center gap-3 mt-3 flex-wrap">
+            <label class="text-xs text-slate-500">狀態</label>
+            <select id="filter-backfill-status" class="text-xs border border-slate-300 rounded px-2 py-1" onchange="renderBackfillAnalysis()">
+              <option value="">全部</option>
+              <option value="ALL_MATCHED">已遞補（含提前補位）</option>
+              <option value="已遞補">僅「已遞補」</option>
+              <option value="提前補位">僅「提前補位」</option>
+              <option value="未遞補">未遞補</option>
+            </select>
+            <label class="text-xs text-slate-500 ml-2">部門</label>
+            <select id="filter-backfill-dept" class="text-xs border border-slate-300 rounded px-2 py-1" onchange="renderBackfillAnalysis()">
+              <option value="">全部</option>
+            </select>
+          </div>
+          <div id="backfill-detail-table" class="overflow-auto max-h-[420px] border border-slate-100 rounded-lg mt-3"></div>
+        </details>
 
         <details class="group border-t border-slate-200 pt-4" style="display:none">
           <summary class="cursor-pointer list-none flex items-center justify-between mb-3 select-none">
@@ -1043,7 +990,7 @@
             </select>
           </div>
           <p class="text-xs text-slate-500 mb-2">判斷標準：在職天數 &lt; 90 天</p>
-          <div id="short-term-pies" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+          <div id="short-term-pies" class="hidden grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
             <div class="border border-slate-200 rounded p-2 bg-slate-50">
               <div class="text-[11px] text-slate-600 mb-1">by 部門</div>
               <div style="position:relative; height:180px;"><canvas id="chart-shortterm-dept-pie"></canvas></div>
@@ -1051,6 +998,10 @@
             <div class="border border-slate-200 rounded p-2 bg-slate-50">
               <div class="text-[11px] text-slate-600 mb-1">by 離職原因</div>
               <div style="position:relative; height:180px;"><canvas id="chart-shortterm-reason-pie"></canvas></div>
+            </div>
+            <div class="border border-slate-200 rounded p-2 bg-slate-50">
+              <div class="text-[11px] text-slate-600 mb-1">by 在職天數</div>
+              <div style="position:relative; height:180px;"><canvas id="chart-shortterm-tenure-pie"></canvas></div>
             </div>
           </div>
           <div id="short-term-summary" class="mb-3"></div>
@@ -1077,7 +1028,7 @@
               </span>
             </span>
           </div>
-          <div id="resign-pies" class="hidden grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+          <div id="resign-pies" class="hidden grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
             <div class="border border-slate-200 rounded p-2 bg-slate-50">
               <div class="text-[11px] text-slate-600 mb-1">by 離職原因</div>
               <div style="position:relative; height:180px;"><canvas id="chart-resign-reason-pie"></canvas></div>
@@ -1085,6 +1036,10 @@
             <div class="border border-slate-200 rounded p-2 bg-slate-50">
               <div class="text-[11px] text-slate-600 mb-1">by 部門</div>
               <div style="position:relative; height:180px;"><canvas id="chart-resign-dept-pie"></canvas></div>
+            </div>
+            <div class="border border-slate-200 rounded p-2 bg-slate-50">
+              <div class="text-[11px] text-slate-600 mb-1">by 年資</div>
+              <div style="position:relative; height:180px;"><canvas id="chart-resign-tenure-pie"></canvas></div>
             </div>
           </div>
           <div id="resign-summary" class="mb-3"></div>
@@ -1139,6 +1094,16 @@
     </main>
   </div>
 
-  <script src="app.js?v=1782804073"></script>
+  <script>
+    // 版本浮水印 — 若你看到「20260702_1745」表示已載到新版
+    console.log('%c[Dashboard] version 20260702_1745 (6月資料+固定欄寬)', 'color:#059669;font-weight:bold;');
+    document.addEventListener('DOMContentLoaded', () => {
+      const badge = document.createElement('div');
+      badge.textContent = 'v20260702_1745';
+      badge.style.cssText = 'position:fixed;bottom:4px;right:4px;font-size:10px;color:#94a3b8;background:rgba(255,255,255,.8);padding:2px 6px;border-radius:3px;z-index:9999;';
+      document.body.appendChild(badge);
+    });
+  </script>
+  <script src="app.js?v=20260702_1745"></script>
 </body>
 </html>

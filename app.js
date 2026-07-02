@@ -11,14 +11,16 @@ let REFERRAL_DATA = null;  // 內部推薦管道（手動 JSON）
 // ========== 1. 載入 + 解密 ==========
 async function loadData() {
   // 優先試加密版,失敗 fallback 到 plain (本機 dev 用)
+  // 加 ?_t=Date.now() 徹底繞開瀏覽器/CDN 任何 cache
+  const ts = Date.now();
   try {
-    const r = await fetch('data/data.encrypted.json', { cache: 'no-store' });
+    const r = await fetch(`data/data.encrypted.json?_t=${ts}`, { cache: 'no-store' });
     if (r.ok) {
       const text = await r.text();
       return { encrypted: true, payload: text.trim() };
     }
   } catch (e) {}
-  const r2 = await fetch('data/data.json', { cache: 'no-store' });
+  const r2 = await fetch(`data/data.json?_t=${ts}`, { cache: 'no-store' });
   if (r2.ok) {
     return { encrypted: false, payload: await r2.json() };
   }
@@ -435,9 +437,8 @@ function render() {
   renderMeta();
   renderKPI();
   renderMonthlyChart();
-  renderReasonsChart();
-  renderTenureChart();
-  renderShortTermChart();
+  // renderReasonsChart / renderTenureChart / renderShortTermChart 已下架
+  // 精華移到「離職清單」+「短期離職警示」 pie
   renderShortTermTable();
   renderBackfillAnalysis();
   renderLeaveTracking();
@@ -1568,11 +1569,19 @@ function _populateDeptBizFilter() {
     sel.innerHTML = '<option value="">全部</option>' +
       bizs.map(b => `<option value="${escapeAttr(b)}"${b === cur ? ' selected' : ''}>${b}</option>`).join('');
   }
-  // 月份
+  // 月份 — 預設當前月（第一次載入時 default，之後保留使用者手動選擇）
   const monSel = document.getElementById('dept-filter-month');
   if (monSel) {
     const months = [...new Set((FILTERED.open_positions || []).map(p => p.month).filter(Boolean))].sort((a, b) => a - b);
-    const cur = monSel.value;
+    const curMonth = new Date().getMonth() + 1;
+    // 若尚未初始化過，預設當前月；否則保留使用者選的
+    const initialized = monSel.dataset.initialized === '1';
+    let cur = monSel.value;
+    if (!initialized) {
+      // 若當前月有職缺就選當前月，否則選 max 月
+      cur = months.includes(curMonth) ? String(curMonth) : (months.length ? String(months[months.length - 1]) : '');
+      monSel.dataset.initialized = '1';
+    }
     monSel.innerHTML = '<option value="">全部</option>' +
       months.map(m => `<option value="${m}"${String(m) === cur ? ' selected' : ''}>${m}月</option>`).join('');
   }
@@ -1651,22 +1660,28 @@ function _renderDeptPies() {
       cv.getContext('2d').clearRect(0, 0, cv.width, cv.height);
       return null;
     }
+    const totalSum = top.reduce((s, x) => s + x[1], 0);
     return new Chart(cv, {
-      type: 'doughnut',
+      type: 'bar',
       data: {
         labels: top.map(x => x[0]),
-        datasets: [{ data: top.map(x => x[1]), backgroundColor: _DEPT_PIE_COLORS, borderWidth: 1 }],
+        datasets: [{ data: top.map(x => x[1]), backgroundColor: _DEPT_PIE_COLORS, borderRadius: 4 }],
       },
       options: {
+        indexAxis: 'y',
         responsive: true, maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'right', labels: { boxWidth: 10, font: { size: 11 } } },
-          tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed} 位 (${Math.round(c.parsed / top.reduce((s, x) => s + x[1], 0) * 100)}%)` } },
+          legend: { display: false },
+          tooltip: { callbacks: { label: (c) => `${c.label}: ${c.parsed.x} 位 (${Math.round(c.parsed.x / totalSum * 100)}%)` } },
         },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0 } },
+          y: { ticks: { font: { size: 11 } } }
+        }
       },
     });
   };
-  _deptResignPie = renderPie('chart-dept-resign-pie', resignByBiz, _deptResignPie);
+  // 離職 pie 已下架 — 避免與「離職清單 by 部門」pie 重複
   _deptPendingPie = renderPie('chart-dept-pending-pie', pendingByBiz, _deptPendingPie);
 }
 
@@ -1683,6 +1698,8 @@ function renderDeptTable() {
   const kw = (document.getElementById('dept-filter-keyword')?.value || '').trim().toLowerCase();
 
   let data = [...(FILTERED.open_positions || [])];
+  // 排除 biz + course 都空白的殘缺列（Excel 「暫不列入計算」區塊 forward-fill 斷掉的殘留）
+  data = data.filter(p => p.biz || p.course);
   if (monthFilter) data = data.filter(p => String(p.month) === monthFilter);
   if (bizFilter) data = data.filter(p => p.biz === bizFilter);
   if (courseFilter) data = data.filter(p => p.course === courseFilter);
@@ -1720,31 +1737,37 @@ function renderDeptTable() {
       <td class="px-3 py-1.5 text-sm">${esc(p.biz)}</td>
       <td class="px-3 py-1.5 text-sm">${esc(p.course || '-')}</td>
       <td class="px-3 py-1.5 text-sm">${esc(p.position)}</td>
-      <td class="px-3 py-1.5">${typeBadge(p.type)}</td>
       <td class="px-3 py-1.5 text-right text-sm">${p.demand || 0}</td>
       <td class="px-3 py-1.5 text-right text-sm text-emerald-700 font-medium">${p.hired || 0}${atsTag(p)}</td>
       <td class="px-3 py-1.5 text-right text-sm">${fmtRate(p.hired, p.demand)}</td>
       <td class="px-3 py-1.5 text-right text-sm ${(p.pending||0)>0 ? 'text-amber-600 font-semibold' : 'text-slate-400'}">${p.pending || 0}</td>
-      <td class="px-3 py-1.5 text-xs text-slate-500 whitespace-nowrap">${esc(p.open_dt || '-')}</td>
     </tr>`).join('');
 
   const html = `
-    <table class="min-w-full text-sm">
+    <table class="text-sm" style="width:100%; table-layout:fixed;">
+      <colgroup>
+        <col style="width:56px;">
+        <col style="width:130px;">
+        <col style="width:150px;">
+        <col>
+        <col style="width:72px;">
+        <col style="width:100px;">
+        <col style="width:72px;">
+        <col style="width:64px;">
+      </colgroup>
       <thead class="bg-slate-50 sticky top-0 z-10">
         <tr class="text-xs text-slate-600">
           <th class="text-left px-3 py-2">月份</th>
           <th class="text-left px-3 py-2">事業單位</th>
           <th class="text-left px-3 py-2">課別</th>
           <th class="text-left px-3 py-2">職位</th>
-          <th class="text-left px-3 py-2">職缺類型</th>
           <th class="text-right px-3 py-2">需求</th>
           <th class="text-right px-3 py-2">已錄取</th>
           <th class="text-right px-3 py-2">達成率</th>
           <th class="text-right px-3 py-2">缺額</th>
-          <th class="text-left px-3 py-2">開缺日</th>
         </tr>
       </thead>
-      <tbody>${rows || '<tr><td colspan="10" class="text-center text-slate-400 py-6">無符合條件的職缺</td></tr>'}</tbody>
+      <tbody>${rows || '<tr><td colspan="8" class="text-center text-slate-400 py-6">無符合條件的職缺</td></tr>'}</tbody>
     </table>
   `;
   document.getElementById('dept-table').innerHTML = html;
@@ -2063,13 +2086,28 @@ function _renderShortTermSummary(data) {
   const showPie = _isDeptFilterAll();
   if (pies) pies.classList.toggle('hidden', !showPie);
   if (showPie) {
-    const deptMap = {}, reasonMap = {};
+    const deptMap = {}, reasonMap = {}, tenureMap = {};
+    // 在職天數分段（固定順序以強制排序）
+    const buckets = ['≤ 3 天','4-7 天','8-14 天','15-30 天','31-60 天','61-90 天'];
+    buckets.forEach(b => tenureMap[b] = 0);
+    const bucketOf = (d) => {
+      if (d <= 3) return '≤ 3 天';
+      if (d <= 7) return '4-7 天';
+      if (d <= 14) return '8-14 天';
+      if (d <= 30) return '15-30 天';
+      if (d <= 60) return '31-60 天';
+      return '61-90 天';
+    };
     data.forEach(r => {
       const d = r.dept || '(未填)'; deptMap[d] = (deptMap[d]||0)+1;
       const re = r.reason || '(未填)'; reasonMap[re] = (reasonMap[re]||0)+1;
+      const t = bucketOf(r.tenure_days || 0);
+      tenureMap[t] = (tenureMap[t]||0)+1;
     });
-    _renderIndicatorPie('chart-shortterm-dept-pie', deptMap, 8);
-    _renderIndicatorPie('chart-shortterm-reason-pie', reasonMap, 8);
+    _renderIndicatorPie('chart-shortterm-dept-pie', deptMap, 5);
+    _renderIndicatorPie('chart-shortterm-reason-pie', reasonMap, 5);
+    // 在職天數分段圖：全部 6 段都秀（分段本身就有排序意義，用 topN=99 避免被裁）
+    _renderIndicatorPie('chart-shortterm-tenure-pie', tenureMap, 99);
   }
   const byDept = _countBy(data, 'dept', 5);
   const byReason = _countBy(data, 'reason', 5);
@@ -2105,13 +2143,29 @@ function _renderResignSummary(data) {
   const showPie = _isDeptFilterAll();
   if (pies) pies.classList.toggle('hidden', !showPie);
   if (showPie) {
-    const reasonMap = {}, deptMap = {};
+    const reasonMap = {}, deptMap = {}, tenureMap = {};
+    // 年資分段（固定順序）
+    const buckets = ['未滿 1 月','1-3 月','3-6 月','6 月-1 年','1-3 年','3-5 年','5-10 年','10 年+'];
+    buckets.forEach(b => tenureMap[b] = 0);
+    const bucketOf = (days) => {
+      if (days < 30) return '未滿 1 月';
+      if (days < 90) return '1-3 月';
+      if (days < 180) return '3-6 月';
+      if (days < 365) return '6 月-1 年';
+      if (days < 365*3) return '1-3 年';
+      if (days < 365*5) return '3-5 年';
+      if (days < 365*10) return '5-10 年';
+      return '10 年+';
+    };
     data.forEach(r => {
       const re = r.reason || '(未填)'; reasonMap[re] = (reasonMap[re]||0)+1;
       const d = r.dept || '(未填)'; deptMap[d] = (deptMap[d]||0)+1;
+      const t = bucketOf(r.tenure_days || 0);
+      tenureMap[t] = (tenureMap[t]||0)+1;
     });
-    _renderIndicatorPie('chart-resign-reason-pie', reasonMap, 8);
-    _renderIndicatorPie('chart-resign-dept-pie', deptMap, 8);
+    _renderIndicatorPie('chart-resign-reason-pie', reasonMap, 5);
+    _renderIndicatorPie('chart-resign-dept-pie', deptMap, 5);
+    _renderIndicatorPie('chart-resign-tenure-pie', tenureMap, 99);
   }
   const byReason = _countBy(data, 'reason', 6);
   const byDept = _countBy(data, 'dept', 5);
@@ -2148,8 +2202,8 @@ function _renderNewHireSummary(data) {
       const d = r.dept || '(未填)'; deptMap[d] = (deptMap[d]||0)+1;
       const t = r.title || '(未填)'; titleMap[t] = (titleMap[t]||0)+1;
     });
-    _renderIndicatorPie('chart-newhire-dept-pie', deptMap, 8);
-    _renderIndicatorPie('chart-newhire-title-pie', titleMap, 8);
+    _renderIndicatorPie('chart-newhire-dept-pie', deptMap, 5);
+    _renderIndicatorPie('chart-newhire-title-pie', titleMap, 5);
   }
   const byDept = _countBy(data, 'dept', 5);
   const byTitle = _countBy(data, 'title', 5);
