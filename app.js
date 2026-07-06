@@ -464,7 +464,11 @@ function renderJobBanksSection() {
   const re = src.recruitment_effectiveness || {};
   const d104 = re.weekly_104;
   const d1111 = re.weekly_1111;
-  if (!d104 && !d1111) { sec.classList.add('hidden'); return; }
+  // 資料源有 keys 但實際 by_week 各項是空 dict → 依舊當作無資料隱藏，避免顯示 undefined
+  const hasRealData = (w) => (w?.by_week || []).some(x =>
+    (x.views || 0) > 0 || (x.resumes || 0) > 0 || (x.applications || 0) > 0
+  );
+  if (!hasRealData(d104) && !hasRealData(d1111)) { sec.classList.add('hidden'); return; }
   sec.classList.remove('hidden');
 
   // 期間（兩平台分開顯示，因為下載週期可能不同）
@@ -1700,6 +1704,9 @@ function renderDeptTable() {
   let data = [...(FILTERED.open_positions || [])];
   // 排除 biz + course 都空白的殘缺列（Excel 「暫不列入計算」區塊 forward-fill 斷掉的殘留）
   data = data.filter(p => p.biz || p.course);
+  // 排除假名/測試職缺（HR 待更新召募達成率 Excel 用的暫時 placeholder）
+  const HIDDEN_POSITION_PATTERNS = [/^aatt2/i, /^acc\(/i];
+  data = data.filter(p => !HIDDEN_POSITION_PATTERNS.some(rx => rx.test(p.position || '')));
   if (monthFilter) data = data.filter(p => String(p.month) === monthFilter);
   if (bizFilter) data = data.filter(p => p.biz === bizFilter);
   if (courseFilter) data = data.filter(p => p.course === courseFilter);
@@ -1725,7 +1732,7 @@ function renderDeptTable() {
     return '<span class="text-[10px] text-slate-400">-</span>';
   };
   const atsTag = (p) => {
-    if (p.ats_only) return '<span class="ml-1 text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-700" title="ATS 有此職缺但 Excel 未列">ATS</span>';
+    if (p.ats_only) return '<span class="ml-1 text-[10px] px-1 py-0.5 rounded bg-blue-100 text-blue-700" title="招募管理系統 有此職缺但 Excel 未列">招募管理系統</span>';
     if (p.hired_excel !== undefined && p.hired_excel !== null && p.hired_excel !== p.hired_ats) {
       return `<span class="ml-1 text-[10px] text-slate-400" title="Excel 原填 ${p.hired_excel}">(Excel:${p.hired_excel})</span>`;
     }
@@ -2509,15 +2516,15 @@ function computeFunnelView() {
     const sumCamp = (k) => camps.reduce((acc, r) => acc + (r[k] || 0), 0);
     // 部門篩選用 by_job 維度（spend/leads 都是 per-job 拆分後的值）
     // 無部門篩選用 campaign 維度（避免共用廣告重複加總）
-    const totalLeads = dept ? sumBy('fb_leads') : sumCamp('leads');
+    const total收件數 = dept ? sumBy('fb_leads') : sumCamp('leads');
     const totalSpend = dept ? sumBy('fb_spend') : sumCamp('spend');
-    // ATS 累計指標（intake/invited/hired）只在「無部門篩選」時用全公司值；
-    // 有部門篩選時，因 producer 的 by_job 沒提供 per-job ATS hired，回傳 null 由 UI 顯示「-」
+    // 招募管理系統累計指標（intake/invited/hired）只在「無部門篩選」時用全公司值；
+    // 有部門篩選時，因 producer 的 by_job 沒提供 per-job 招募管理系統 hired，回傳 null 由 UI 顯示「-」
     const atsAvailable = !dept;
     summary = {
       fb_total_spend: totalSpend,
-      fb_total_leads: totalLeads,
-      fb_avg_cpl: totalLeads ? totalSpend / totalLeads : 0,
+      fb_total_leads: total收件數,
+      fb_avg_cpl: total收件數 ? totalSpend / total收件數 : 0,
       fb_total_in_ats: sumBy('fb_in_ats'),
       fb_total_invited: sumBy('fb_invited'),
       fb_total_uninvited: sumBy('fb_not_invited'),
@@ -2575,6 +2582,14 @@ function renderFunnelSection() {
   const sec = document.getElementById('section-funnel');
   if (!sec) return;
   if (!FUNNEL_DATA) { sec.classList.add('hidden'); return; }
+  // FB 資料若 leads/spend 全 0（Meta API 抓不到）→ 隱藏整個 FB 招募廣告刊登區塊
+  const byMonth = FUNNEL_DATA.by_month || [];
+  const totalLeads = byMonth.reduce((s, m) => s + (m.leads || 0), 0);
+  const totalSpend = byMonth.reduce((s, m) => s + (m.spend || 0), 0);
+  if (totalLeads === 0 && totalSpend === 0) {
+    sec.classList.add('hidden');
+    return;
+  }
   sec.classList.remove('hidden');
 
   const view = computeFunnelView();
@@ -2593,16 +2608,16 @@ function renderFunnelSection() {
   document.getElementById('funnel-period').textContent = periodTxt;
 
   // 無 leads → 整段視為「無資料」（部門沒做 FB 刊登 / 期間沒有 campaign）
-  const noLeads = !(s.fb_total_leads > 0);
+  const no收件數 = !(s.fb_total_leads > 0);
   document.getElementById('funnel-spend').textContent = fmtNum(Math.round(s.fb_total_spend || 0));
   document.getElementById('funnel-leads').textContent = fmtNum(s.fb_total_leads || 0);
-  document.getElementById('funnel-in-ats').textContent = noLeads ? '-' : fmtNum(s.fb_total_in_ats || 0);
-  document.getElementById('funnel-invited').textContent = noLeads ? '-' : fmtNum(s.fb_total_invited || 0);
+  document.getElementById('funnel-in-ats').textContent = no收件數 ? '-' : fmtNum(s.fb_total_in_ats || 0);
+  document.getElementById('funnel-invited').textContent = no收件數 ? '-' : fmtNum(s.fb_total_invited || 0);
   document.getElementById('funnel-hired').textContent = s.ats_total_hired == null ? '-' : fmtNum(s.ats_total_hired);
   document.getElementById('funnel-cpl').textContent = (s.fb_avg_cpl || 0).toFixed(1);
 
-  const leadsToAts = (!noLeads && s.fb_total_leads) ? (s.fb_total_in_ats / s.fb_total_leads * 100).toFixed(1) + '%' : '-';
-  const inAtsToInv = (!noLeads && s.fb_total_in_ats) ? (s.fb_total_invited / s.fb_total_in_ats * 100).toFixed(1) + '%' : '-';
+  const leadsToAts = (!no收件數 && s.fb_total_leads) ? (s.fb_total_in_ats / s.fb_total_leads * 100).toFixed(1) + '%' : '-';
+  const inAtsToInv = (!no收件數 && s.fb_total_in_ats) ? (s.fb_total_invited / s.fb_total_in_ats * 100).toFixed(1) + '%' : '-';
   document.getElementById('funnel-in-ats-rate').textContent = leadsToAts;
   document.getElementById('funnel-invited-rate').textContent = inAtsToInv;
 
@@ -2724,7 +2739,7 @@ function renderFunnelCrossChannel(d, view) {
   const monthTo = view.dateTo ? view.dateTo.slice(0, 7) : '';
   const inRangeMonth = (m) => (!monthFrom || m >= monthFrom) && (!monthTo || m <= monthTo);
 
-  // ① 直接路徑：FB by_month 扣掉跨管道 = 直接從 FB 表單進 ATS 的部分
+  // ① 直接路徑：FB by_month 扣掉跨管道 = 直接從 FB 表單進招募管理系統 的部分
   const bm = (d.by_month || []).filter(m => inRangeMonth(m.month));
   const allIn = bm.reduce((s, m) => s + (m.in_ats || 0), 0);
   const allInv = bm.reduce((s, m) => s + (m.invited || 0), 0);
@@ -2761,10 +2776,10 @@ function renderFunnelCrossChannel(d, view) {
   document.getElementById('cc-total-in-ats').textContent = fmtNum(allIn);
   document.getElementById('cc-total-invited').textContent = fmtNum(allInv);
   document.getElementById('cc-total-hired').textContent = fmtNum(allHi);
-  // 整體入職率 = 總報到 / 總進 ATS
+  // 整體入職率 = 總報到 / 總進招募管理系統
   const rate = allIn > 0 ? (allHi / allIn * 100).toFixed(1) + '%' : '—';
   document.getElementById('cc-overall-rate').textContent = rate;
-  document.getElementById('cc-overall-rate-note').textContent = allIn > 0 ? `${allHi} / ${allIn} 進 ATS` : '—';
+  document.getElementById('cc-overall-rate-note').textContent = allIn > 0 ? `${allHi} / ${allIn} 進招募管理系統` : '—';
 }
 
 function renderFunnelChart(s) {
@@ -2772,7 +2787,7 @@ function renderFunnelChart(s) {
   destroyChart('funnel');
   const ctx = document.getElementById('chart-funnel');
   if (!ctx) return;
-  const labels = ['FB Leads', '進 ATS', '已邀約', '已報到'];
+  const labels = ['FB 收件', '進招募管理系統', '已邀約', '已報到'];
   const values = [s.fb_total_leads || 0, s.fb_total_in_ats || 0, s.fb_total_invited || 0, s.ats_total_hired || 0];
   const colors = ['#3b82f6', '#06b6d4', '#f59e0b', '#10b981'];
   CHARTS.funnel = new Chart(ctx, {
@@ -2790,7 +2805,7 @@ function renderFunnelChart(s) {
               const v = c.parsed.x;
               const base = values[0];
               const pct = base ? ((v / base) * 100).toFixed(1) + '%' : '-';
-              return ' ' + fmtNum(v) + '（占 Leads ' + pct + '）';
+              return ' ' + fmtNum(v) + '（占 收件數 ' + pct + '）';
             }
           }
         }
@@ -2915,10 +2930,10 @@ function renderFunnelByJob(rows) {
     th('unit', '單位', 'text-left') +
     th('job_title', '職缺', 'text-left') +
     th('fb_spend', '花費', 'text-right') +
-    th('fb_leads', 'Leads', 'text-right') +
+    th('fb_leads', '收件數', 'text-right') +
     th('fb_cpl', 'CPL', 'text-right') +
-    th('fb_in_ats', '進ATS', 'text-right') +
-    '<th class="px-2 py-2 text-xs font-medium text-slate-600 text-right">進ATS率</th>' +
+    th('fb_in_ats', '進招募管理系統', 'text-right') +
+    '<th class="px-2 py-2 text-xs font-medium text-slate-600 text-right">進招募管理系統率</th>' +
     th('fb_invited', '已邀約', 'text-right') +
     '<th class="px-2 py-2 text-xs font-medium text-slate-600 text-right">邀約率</th>' +
     th('fb_contacted_fail', '聯繫失敗', 'text-right') +
@@ -2978,7 +2993,7 @@ function renderFunnelCampaigns(camps) {
     '<th class="px-2 py-2 text-left text-xs font-medium text-slate-600">廣告名稱</th>' +
     '<th class="px-2 py-2 text-left text-xs font-medium text-slate-600">期間</th>' +
     '<th class="px-2 py-2 text-right text-xs font-medium text-slate-600">花費</th>' +
-    '<th class="px-2 py-2 text-right text-xs font-medium text-slate-600">Leads</th>' +
+    '<th class="px-2 py-2 text-right text-xs font-medium text-slate-600">收件數</th>' +
     '<th class="px-2 py-2 text-right text-xs font-medium text-slate-600">CPL</th>' +
     '<th class="px-2 py-2 text-right text-xs font-medium text-slate-600">曝光</th>' +
     '<th class="px-2 py-2 text-right text-xs font-medium text-slate-600">CTR</th>' +
@@ -3094,7 +3109,7 @@ function renderReferralSection() {
         <tr>
           <th class="px-3 py-2 text-left text-xs font-medium text-slate-600">部門</th>
           <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">推薦</th>
-          <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">進 ATS</th>
+          <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">進招募管理系統</th>
           <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">已邀約</th>
           <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">已報到</th>
           <th class="px-3 py-2 text-right text-xs font-medium text-slate-600">獎金</th>
@@ -3170,11 +3185,9 @@ function renderReferralBonusDetails() {
       </tr>`;
     }
     const total = d.paid + d.pending;
-    const exTag = d.exception_note
-      ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-fuchsia-100 text-fuchsia-700" title="${esc(d.exception_note)}">特例</span>`
-      : '';
+    const exTag = '';  // 「特例」badge 已下架（HR 認定為適用時不再視覺標示）
     const manTag = d.manual
-      ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700" title="未走 ATS 系統，HR 手動補登">手動補登</span>`
+      ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700" title="未走 招募管理系統 系統，HR 手動補登">手動補登</span>`
       : '';
     return `<tr class="border-t border-slate-100 hover:bg-emerald-50">
       <td class="px-3 py-1.5 text-sm font-medium">${esc(d.name)}${manTag}${exTag}</td>
@@ -3247,7 +3260,8 @@ function renderChannelOverview() {
       matched = (FUNNEL_DATA.by_month || []).filter(m => m.month >= monthFrom && m.month <= monthTo);
     }
     if (matched.length === 0) {
-      channels.push({
+      // 無資料 → 直接不 push FB 那列
+      if (false) channels.push({
         name: 'FB 廣告', icon: '📣', color: 'rose',
         spend: 0, leads: null, in_ats: null, invited: null, hired: null,
         period: `${monthFrom} ~ ${monthTo}` + (dept ? ` (${dept})` : ''),
@@ -3278,6 +3292,10 @@ function renderChannelOverview() {
         if (x.hired) ccHired++;
         ccBySrc[x.src] = (ccBySrc[x.src] || 0) + 1;
       });
+      // 若 FB 花費 + Leads 皆 0（Meta API 抓不到）→ 這列直接不 push（免得表格顯示 $0）
+      if (sum.spend === 0 && sum.leads === 0) {
+        // skip
+      } else
       channels.push({
         name: 'FB 廣告', icon: '📣', color: 'rose',
         spend: sum.spend,
@@ -3302,7 +3320,7 @@ function renderChannelOverview() {
   const [ty, tm] = monthTo.split('-').map(Number);
   const periodMonthCount = Math.max(1, (ty - fy) * 12 + (tm - fm) + 1);
 
-  // 從 channel_intake (ATS source 反推) 取進 ATS / 邀約 / 報到（按月+部門）
+  // 從 channel_intake (招募管理系統 source 反推) 取進招募管理系統 / 邀約 / 報到（按月+部門）
   const channelIntakeAll = re.channel_intake?.by_source_month_dept || [];
   const aggregateIntake = (sourceKey) => {
     const matched = channelIntakeAll.filter(x =>
@@ -3325,7 +3343,7 @@ function renderChannelOverview() {
     const matched = data.by_week.filter(w =>
       w.week_end >= fromDate && w.week_start <= toDate
     );
-    // ATS 漏斗（從 channel_intake 取）
+    // 招募管理系統 漏斗（從 channel_intake 取）
     const intake = intakeKey ? aggregateIntake(intakeKey) : {in_ats: null, invited: null, hired: null};
     // 年費月攤提（不論該期間有沒有週報資料，年費都在跑）
     // 有 dept 篩選時：按該 dept 在該管道的 in_ats 比例分攤年費；無篩選用全額
@@ -3379,7 +3397,7 @@ function renderChannelOverview() {
       period: `${monthFrom} ~ ${monthTo}` + (dept ? ` ${dept}` : ''),
       coverageNote: `實際資料涵蓋 ${periodStart} ~ ${periodEnd} (${matched.length} 週報)`,
       spendNote: amortizedSpend
-        ? (dept ? `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月 × ${dept} 進ATS 比例`
+        ? (dept ? `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月 × ${dept} 進招募管理系統 比例`
                 : `年費 $${fmtNum(annualFee)} × ${periodMonthCount}/12 月`)
         : null,
       paymentInfo: (channelCosts[costKey] || {}).payment_month
@@ -3492,8 +3510,8 @@ function renderChannelOverview() {
         </div>
         <div class="grid grid-cols-2 gap-2 text-xs">
           <div ${spendInfo}><span class="text-slate-500">投入 ${spendIcon}</span><div class="font-bold ${tc}">${(c.spend || 0) > 0 ? '$' + fmtNum(Math.round(c.spend)) : (c.noData && !c.spendNote ? '—' : '$0')}</div></div>
-          <div><span class="text-slate-500">履歷/Leads</span><div class="font-bold ${tc}">${c.leads == null ? '—' : fmtNum(c.leads)}</div></div>
-          <div><span class="text-slate-500">進 ATS</span><div class="font-bold">${c.in_ats == null ? '—' : fmtNum(c.in_ats)}</div></div>
+          <div><span class="text-slate-500">履歷 (件)</span><div class="font-bold ${tc}">${c.leads == null ? '—' : fmtNum(c.leads)}</div></div>
+          <div><span class="text-slate-500">進招募管理系統</span><div class="font-bold">${c.in_ats == null ? '—' : fmtNum(c.in_ats)}</div></div>
           <div><span class="text-slate-500">已邀約</span><div class="font-bold">${c.invited == null ? '—' : fmtNum(c.invited)}</div></div>
           <div><span class="text-slate-500">已報到</span><div class="font-bold text-green-700">${c.hired == null ? '—' : fmtNum(c.hired)}</div></div>
           <div><span class="text-slate-500">CPL</span><div class="font-bold">${cpl ? '$' + fmtNum(cpl) : '—'}</div></div>
@@ -3555,13 +3573,13 @@ function renderChannelOverview() {
 
   // 全期間 × 全管道 統計總結
   const totSpend = channels.reduce((s, c) => s + (c.spend || 0), 0);
-  const totLeads = channels.reduce((s, c) => s + (c.leads || 0), 0);
+  const tot收件數 = channels.reduce((s, c) => s + (c.leads || 0), 0);
   const totInAts = channels.reduce((s, c) => s + (c.in_ats || 0), 0);
   const totInvited = channels.reduce((s, c) => s + (c.invited || 0), 0);
   const totHired = channels.reduce((s, c) => s + (c.hired || 0), 0);
   const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   setText('ov-tot-spend', fmtNum(Math.round(totSpend)));
-  setText('ov-tot-leads', fmtNum(totLeads));
+  setText('ov-tot-leads', fmtNum(tot收件數));
   setText('ov-tot-inats', fmtNum(totInAts));
   setText('ov-tot-invited', fmtNum(totInvited));
   setText('ov-tot-hired', fmtNum(totHired));
@@ -3589,7 +3607,7 @@ function renderOvAppsChart(channels) {
     data: {
       labels: channels.map(c => c.name),
       datasets: [{
-        label: '履歷／Leads',
+        label: '履歷／收件數',
         data: channels.map(c => c.leads),
         backgroundColor: channels.map(c => colors[c.name] || '#94a3b8'),
         borderRadius: 4,

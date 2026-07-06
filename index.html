@@ -300,7 +300,7 @@
               <span class="ml-2 text-xs font-normal text-slate-500 group-open:hidden">▸ 點此展開</span>
               <span class="ml-2 text-xs font-normal text-slate-500 hidden group-open:inline">▾ 收起</span>
             </h3>
-            <span class="text-xs text-slate-500">錄取數以 ATS pre_employees 為準；類型欄=Excel H欄「職缺狀況」</span>
+            <span class="text-xs text-slate-500">錄取數以 招募管理系統 為準；類型欄=Excel H欄「職缺狀況」</span>
           </summary>
           <!-- 篩選器 -->
           <div class="flex flex-wrap items-center gap-2 mb-3 text-xs">
@@ -416,12 +416,12 @@
       <!-- ============ Tab 2：招募管道效益 ============ -->
       <div id="tab-channel" class="tab-content-channel space-y-6 hidden">
       <div class="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg px-4 py-3 text-sm space-y-1">
-        <div><span class="font-medium">📌 本頁說明：</span>FB 廣告與內部推薦資料每天 08:00 自動由 Meta API + ATS API 產生（YTD 累計）。</div>
+        <div><span class="font-medium">📌 本頁說明：</span>FB 廣告與內部推薦資料每天 08:00 自動由 Meta API + 招募管理系統 API 產生（YTD 累計）。</div>
         <div class="text-xs">
           <b>📅 各管道資料區間</b>：<br>
           ・FB 廣告 / 內部推薦：1/1 ~ 今日（YTD 累計）<br>
           ・104 / 1111 人力銀行：6/1 ~ 6/21（合併 3 週歷史檔，HR 從 6 月才開始下載週報）<br>
-          <b>期間篩選器影響範圍</b>：FB 廣告花費 / Leads / CPL / 廣告波次表（這些有 campaign 日期可動態切）；其餘卡片仍顯示原生區間。<br>
+          <b>期間篩選器影響範圍</b>：FB 廣告花費 / 收件數 / CPL / 廣告波次表（這些有 campaign 日期可動態切）；其餘卡片仍顯示原生區間。<br>
           <b>部門篩選</b>：依「funnel.unit ↔ HR 部門」短碼比對（南區業務二課 ↔ 南二）；對不到時整段歸 0。
         </div>
       </div>
@@ -435,8 +435,8 @@
             <span class="src-info" tabindex="0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span class="src-tip">
-                <b>整合來源</b>：FB 廣告漏斗（Meta API）+ 104 週報 + 1111 週報 + 內部推薦（ATS API）<br>
-                <b>用途</b>：橫向比較各管道的 投入 / 履歷 / 進 ATS / 邀約 / 報到 ／ 每筆履歷成本<br>
+                <b>整合來源</b>：FB 廣告漏斗（Meta API）+ 104 週報 + 1111 週報 + 內部推薦（招募管理系統 API）<br>
+                <b>用途</b>：橫向比較各管道的 投入 / 履歷 / 進招募管理系統 / 邀約 / 報到 ／ 每筆履歷成本<br>
                 <b>區間口徑</b>：FB 廣告 / 內部推薦 = YTD（1/1 ~ 今日）；104 / 1111 = 僅上週（HR 無歷史週報累積）
               </span>
             </span>
@@ -453,11 +453,11 @@
               <div class="text-lg font-bold text-rose-700">$<span id="ov-tot-spend">-</span></div>
             </div>
             <div>
-              <div class="text-[10px] text-slate-500">總 Leads/履歷</div>
+              <div class="text-[10px] text-slate-500">總履歷/履歷</div>
               <div class="text-lg font-bold text-blue-700"><span id="ov-tot-leads">-</span></div>
             </div>
             <div>
-              <div class="text-[10px] text-slate-500">總進 ATS</div>
+              <div class="text-[10px] text-slate-500">總進招募管理系統</div>
               <div class="text-lg font-bold text-cyan-700"><span id="ov-tot-inats">-</span></div>
             </div>
             <div>
@@ -471,7 +471,7 @@
             <div>
               <div class="text-[10px] text-slate-500">整體入職率</div>
               <div class="text-lg font-bold text-purple-700"><span id="ov-rate">-</span></div>
-              <div class="text-[10px] text-slate-400">報到/進ATS</div>
+              <div class="text-[10px] text-slate-400">報到/進招募管理系統</div>
             </div>
             <div class="border-l border-slate-200 pl-3">
               <div class="text-[10px] text-slate-500">每位報到成本</div>
@@ -501,8 +501,8 @@
               <tr>
                 <th class="px-3 py-2 text-left text-xs font-semibold text-slate-700">管道</th>
                 <th class="px-3 py-2 text-right text-xs font-semibold text-slate-700">投入（元）</th>
-                <th class="px-3 py-2 text-right text-xs font-semibold text-slate-700">履歷／Leads</th>
-                <th class="px-3 py-2 text-right text-xs font-semibold text-slate-700">進 ATS</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-slate-700">履歷／收件數</th>
+                <th class="px-3 py-2 text-right text-xs font-semibold text-slate-700">進招募管理系統</th>
                 <th class="px-3 py-2 text-right text-xs font-semibold text-slate-700">已邀約</th>
                 <th class="px-3 py-2 text-right text-xs font-semibold text-slate-700">已報到</th>
                 <th class="px-3 py-2 text-right text-xs font-semibold text-slate-700">每筆 CPL</th>
@@ -523,7 +523,7 @@
             <span class="src-info" tabindex="0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span class="src-tip">
-                <b>資料源</b>：ATS API <code>/api/hr/applicants</code> + <code>/api/hr/pre-employees</code>（即時拉取 referralType=internal）<br>
+                <b>資料源</b>：招募管理系統 API <code>/api/hr/applicants</code> + <code>/api/hr/pre-employees</code>（即時拉取 referralType=internal）<br>
                 <b>更新</b>：跑 <code>python scripts/build_referral_stats.py</code> 重抓<br>
                 <b>欄位邏輯</b>：推薦人數=applicants 內推 / 已邀約=pre_employees offerStatus / 已報到=checkedIn<br>
                 <b>獎金</b>：API 無此欄位，可在 <code>data/manual/referral_bonus.json</code> 手動覆寫
@@ -532,11 +532,10 @@
           </h2>
           <div class="flex items-center gap-2 text-xs">
             <span id="ref-period" class="text-slate-500"></span>
-            <a href="/external-data/recruitment_referral_stats.json" target="_blank" class="text-blue-600 hover:underline">📄 檢視原始 JSON</a>
           </div>
         </div>
         <div id="ref-empty-banner" class="hidden mb-4 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg px-4 py-3 text-sm">
-          ⚠️ 內部推薦資料尚未填寫。請編輯 <code>data/manual/referral_stats.json</code>，填入本月推薦人數、進 ATS 數、邀約數、報到數及獎金總額後，Ctrl+F5 重整即可。
+          ⚠️ 內部推薦資料尚未填寫。請編輯 <code>data/manual/referral_stats.json</code>，填入本月推薦人數、進招募管理系統 數、邀約數、報到數及獎金總額後，Ctrl+F5 重整即可。
         </div>
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
           <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
@@ -545,7 +544,7 @@
             <div class="text-xs text-emerald-600 mt-1">員工推薦案件</div>
           </div>
           <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
-            <div class="text-xs text-cyan-700 font-medium">進 ATS</div>
+            <div class="text-xs text-cyan-700 font-medium">進招募管理系統</div>
             <div class="text-2xl font-bold text-cyan-700 mt-1" id="ref-in-ats">-</div>
             <div class="text-xs text-cyan-600 mt-1"><span id="ref-in-ats-rate">-</span></div>
           </div>
@@ -581,7 +580,7 @@
                 <h3 class="text-sm font-semibold text-slate-700">
                   推薦人 Top 10
                   <span class="text-slate-400 cursor-help"
-                        title="只統計已進入 pre_employees（HR 已 offer）的推薦案；尚在 applicant 階段的內推 ATS 不記錄推薦人姓名，故加總可能小於上方「推薦人數」總計。">ⓘ</span>
+                        title="只統計已進入 pre_employees（HR 已 offer）的推薦案；尚在 applicant 階段的內推招募管理系統 不記錄推薦人姓名，故加總可能小於上方「推薦人數」總計。">ⓘ</span>
                 </h3>
                 <span class="text-xs text-slate-500 group-open:hidden">▸ 點此展開明細（含推薦人姓名）</span>
                 <span class="text-xs text-slate-500 hidden group-open:inline">▾ 收起明細</span>
@@ -631,7 +630,7 @@
             <span class="src-info" tabindex="0">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               <span class="src-tip">
-                <b>來源</b>：即時打 Meta API + ATS API（每天 08:00 自動更新）<br>
+                <b>來源</b>：即時打 Meta API + 招募管理系統 API（每天 08:00 自動更新）<br>
                 <b>檔案</b>：<code>data/recruitment_funnel.json</code>，前端 fetch TTL 1 小時<br>
                 <b>fb_total_leads</b>：含多職缺共用廣告重複計算<br>
                 <b>共用廣告</b>：related_jobs 長度 &gt; 1 的 campaign
@@ -649,14 +648,14 @@
             <div class="text-xs text-rose-600 mt-1">期間累計</div>
           </div>
           <div class="bg-blue-50 border border-blue-200 rounded-lg p-4"
-               title="FB 總 Leads = Meta API 計數的本期間新進 leads（lead 時間落在區間內）；與「進 ATS」採用 HR 接觸日口徑不同，兩者可能存在時間落差。">
-            <div class="text-xs text-blue-700 font-medium">FB 總 Leads <span class="text-slate-400 cursor-help">ⓘ</span></div>
+               title="FB 總履歷 = Meta API 計數的本期間新進 leads（lead 時間落在區間內）；與「進招募管理系統」採用 HR 接觸日口徑不同，兩者可能存在時間落差。">
+            <div class="text-xs text-blue-700 font-medium">FB 總履歷 <span class="text-slate-400 cursor-help">ⓘ</span></div>
             <div class="text-2xl font-bold text-blue-700 mt-1" id="funnel-leads">-</div>
             <div class="text-xs text-blue-600 mt-1">本期新進（lead 時間口徑）</div>
           </div>
           <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-4"
-               title="進 ATS = 本期間 HR 接觸日（contactDate）落在區間內的 FB 來源筆數，可能包含上期 lead 延遲接觸者；故偶有「進 ATS &gt; FB 表單數」屬時間口徑差異，非資料錯誤。">
-            <div class="text-xs text-cyan-700 font-medium">進 ATS <span class="text-slate-400 cursor-help">ⓘ</span></div>
+               title="進招募管理系統 = 本期間 HR 接觸日（contactDate）落在區間內的 FB 來源筆數，可能包含上期 lead 延遲接觸者；故偶有「進招募管理系統 &gt; FB 表單數」屬時間口徑差異，非資料錯誤。">
+            <div class="text-xs text-cyan-700 font-medium">進招募管理系統 <span class="text-slate-400 cursor-help">ⓘ</span></div>
             <div class="text-2xl font-bold text-cyan-700 mt-1" id="funnel-in-ats">-</div>
             <div class="text-xs text-cyan-600 mt-1"><span id="funnel-in-ats-rate">-</span> 轉換 <span class="text-[10px] text-slate-400">（HR 接觸日口徑）</span></div>
           </div>
@@ -668,7 +667,7 @@
           <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
             <div class="text-xs text-emerald-700 font-medium">已報到</div>
             <div class="text-2xl font-bold text-emerald-700 mt-1" id="funnel-hired">-</div>
-            <div class="text-xs text-emerald-600 mt-1">ATS 累計 <span class="text-[10px] text-slate-400">（全公司，部門篩選時不適用）</span></div>
+            <div class="text-xs text-emerald-600 mt-1">招募管理系統累計 <span class="text-[10px] text-slate-400">（全公司，部門篩選時不適用）</span></div>
           </div>
           <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
             <div class="text-xs text-slate-700 font-medium">平均 CPL</div>
@@ -682,7 +681,7 @@
           <div class="flex items-center justify-between mb-3">
             <h3 class="text-sm font-semibold text-fuchsia-800 flex items-center gap-2">
               🎯 FB 廣告總影響力（直接 + 跨管道）
-              <span class="text-slate-400 cursor-help" title="把『直接從 FB 表單進 ATS』和『看 FB 廣告後改投 104/1111/官網』兩條路徑合計，計算 FB 廣告整體入職貢獻">ⓘ</span>
+              <span class="text-slate-400 cursor-help" title="把『直接從 FB 表單進招募管理系統』和『看 FB 廣告後改投 104/1111/官網』兩條路徑合計，計算 FB 廣告整體入職貢獻">ⓘ</span>
             </h3>
             <span class="text-[10px] text-slate-500">phone 末9碼比中 + 期間 + 部門篩選</span>
           </div>
@@ -691,9 +690,9 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             <!-- 直接路徑 -->
             <div class="bg-white rounded-lg p-3 border border-fuchsia-100">
-              <div class="text-xs font-semibold text-fuchsia-700 mb-2">①直接路徑：FB 表單 → ATS</div>
+              <div class="text-xs font-semibold text-fuchsia-700 mb-2">①直接路徑：FB 表單 → 招募管理系統</div>
               <div class="flex items-center justify-between text-xs">
-                <div class="text-center"><div class="text-slate-500">進 ATS</div><div class="font-bold text-cyan-700 text-lg" id="cc-direct-in-ats">-</div></div>
+                <div class="text-center"><div class="text-slate-500">進招募管理系統</div><div class="font-bold text-cyan-700 text-lg" id="cc-direct-in-ats">-</div></div>
                 <span class="text-slate-300">→</span>
                 <div class="text-center"><div class="text-slate-500">邀約</div><div class="font-bold text-amber-700 text-lg" id="cc-direct-invited">-</div></div>
                 <span class="text-slate-300">→</span>
@@ -722,7 +721,7 @@
           <div class="bg-white rounded-lg p-3 border border-fuchsia-200">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
               <div>
-                <div class="text-xs text-slate-500">FB 總進 ATS</div>
+                <div class="text-xs text-slate-500">FB 總進招募管理系統</div>
                 <div class="text-lg font-bold text-cyan-800" id="cc-total-in-ats">-</div>
               </div>
               <div>
@@ -752,7 +751,7 @@
           </div>
           <div class="border border-slate-100 rounded-lg p-4">
             <h3 class="text-sm font-semibold text-slate-700 mb-3">未邀約原因分布
-              <span class="text-xs text-slate-400 font-normal">（FB Leads 進 ATS 但未邀約者）</span>
+              <span class="text-xs text-slate-400 font-normal">（FB 收件 進招募管理系統 但未邀約者）</span>
             </h3>
             <div style="position:relative; height:300px;">
               <canvas id="chart-funnel-reasons"></canvas>
@@ -763,7 +762,7 @@
         <!-- 職缺視角表 -->
         <div class="mb-5">
           <div class="flex items-center justify-between mb-2">
-            <h3 class="text-sm font-semibold text-slate-700">職缺視角：各職缺 FB → ATS 漏斗</h3>
+            <h3 class="text-sm font-semibold text-slate-700">職缺視角：各職缺 FB → 招募管理系統 漏斗</h3>
             <span class="text-xs text-slate-400">點欄位可排序</span>
           </div>
           <div id="funnel-byjob-table" class="overflow-auto max-h-[420px] border border-slate-100 rounded-lg"></div>
@@ -779,7 +778,7 @@
                 <option value="cpl_asc">CPL 由低到高</option>
                 <option value="cpl_desc">CPL 由高到低</option>
                 <option value="spend_desc">花費由高到低</option>
-                <option value="leads_desc">Leads 由高到低</option>
+                <option value="leads_desc">收件數 由高到低</option>
               </select>
             </div>
           </div>
@@ -788,7 +787,7 @@
 
         <!-- 待跟進統計 -->
         <div class="border-t border-slate-200 pt-4">
-          <h3 class="text-sm font-semibold text-slate-700 mb-3">📋 待跟進統計（備註空白，FB Leads 進 ATS 但尚未確認）</h3>
+          <h3 class="text-sm font-semibold text-slate-700 mb-3">📋 待跟進統計（備註空白，FB 收件 進招募管理系統 但尚未確認）</h3>
           <div id="funnel-pending-stats" class="overflow-auto max-h-[320px] border border-slate-100 rounded-lg"></div>
         </div>
 
@@ -1095,15 +1094,15 @@
   </div>
 
   <script>
-    // 版本浮水印 — 若你看到「20260702_1900」表示已載到新版
-    console.log('%c[Dashboard] version 20260702_1900 (6月資料+固定欄寬)', 'color:#059669;font-weight:bold;');
+    // 版本浮水印 — 若你看到「20260706_1610」表示已載到新版
+    console.log('%c[Dashboard] version 20260706_1610 (6月資料+固定欄寬)', 'color:#059669;font-weight:bold;');
     document.addEventListener('DOMContentLoaded', () => {
       const badge = document.createElement('div');
-      badge.textContent = 'v20260702_1900';
+      badge.textContent = 'v20260706_1610';
       badge.style.cssText = 'position:fixed;bottom:4px;right:4px;font-size:10px;color:#94a3b8;background:rgba(255,255,255,.8);padding:2px 6px;border-radius:3px;z-index:9999;';
       document.body.appendChild(badge);
     });
   </script>
-  <script src="app.js?v=20260702_1900"></script>
+  <script src="app.js?v=20260706_1610"></script>
 </body>
 </html>
