@@ -105,9 +105,9 @@ async function loadFunnel() {
     if (DATA?.recruitment_effectiveness?.funnel) {
       FUNNEL_DATA = DATA.recruitment_effectiveness.funnel;
     } else {
-      const r = await fetch('/external-data/recruitment_funnel.json', { cache: 'default' });
+      const r = await fetch('/external-data/recruitment_funnel.json?_t=' + Date.now(), { cache: 'no-store' });
       if (!r.ok) {
-        const r2 = await fetch('data/recruitment_funnel.json', { cache: 'default' });
+        const r2 = await fetch('data/recruitment_funnel.json?_t=' + Date.now(), { cache: 'no-store' });
         if (!r2.ok) throw new Error('找不到 recruitment_funnel.json');
         FUNNEL_DATA = await r2.json();
       } else {
@@ -235,10 +235,13 @@ function applyFilters() {
   // 職缺: 用月份欄位篩選 (1~12)
   const fromM = parseInt(monthFrom.slice(5, 7));
   const toM = parseInt(monthTo.slice(5, 7));
+  // 排除假名/測試職缺（aatt2、acc(...) 等 HR 暫時 placeholder）
+  const _HIDE = [/aatt2/i, /^acc\(/i];
   const positions = DATA.open_positions.filter(p =>
     (!dept || p.biz === dept || p.course === dept) &&
     (!title || p.position === title) &&
-    (p.month >= fromM && p.month <= toM)
+    (p.month >= fromM && p.month <= toM) &&
+    !_HIDE.some(rx => rx.test(p.position || ''))
   );
   // 部門表：依篩選區間重算 (而非用 DATA 預存的 YTD 值)
   // 用 resigns/newHires + positions 重算每部門的 離職/到職/淨增減/流失率
@@ -464,26 +467,28 @@ function renderJobBanksSection() {
   const re = src.recruitment_effectiveness || {};
   const d104 = re.weekly_104;
   const d1111 = re.weekly_1111;
-  // 資料源有 keys 但實際 by_week 各項是空 dict → 依舊當作無資料隱藏，避免顯示 undefined
+  // 資料源有 keys 但實際 by_week 各項是空 dict → 隱藏避免顯示 undefined
   const hasRealData = (w) => (w?.by_week || []).some(x =>
-    (x.views || 0) > 0 || (x.resumes || 0) > 0 || (x.applications || 0) > 0
+    (x.total_pv || x.views || 0) > 0 || (x.total_app || x.resumes || x.applications || 0) > 0
   );
   if (!hasRealData(d104) && !hasRealData(d1111)) { sec.classList.add('hidden'); return; }
   sec.classList.remove('hidden');
 
-  // 期間（兩平台分開顯示，因為下載週期可能不同）
+  // 期間（兩平台分開顯示，欄位名 data_range_start/end 或 fallback week_start/end）
   const periodsEl = document.getElementById('jb-periods');
   periodsEl.innerHTML =
-    (d104 ? `<span>🔵 104：${d104.week_start} ~ ${d104.week_end}</span>` : '') +
-    (d1111 ? `<span>🟣 1111：${d1111.week_start} ~ ${d1111.week_end}</span>` : '');
+    (d104 ? `<span>🔵 104：${d104.data_range_start || d104.week_start || '-'} ~ ${d104.data_range_end || d104.week_end || '-'}</span>` : '') +
+    (d1111 ? `<span>🟣 1111：${d1111.data_range_start || d1111.week_start || '-'} ~ ${d1111.data_range_end || d1111.week_end || '-'}</span>` : '');
 
-  // 合計卡片
-  const pv104 = d104 ? d104.total_pv : 0;
-  const pv1111 = d1111 ? d1111.total_pv : 0;
-  const app104 = d104 ? d104.total_app : 0;
-  const app1111 = d1111 ? d1111.total_app : 0;
-  const jobs104 = d104 ? d104.total_active_jobs : 0;
-  const jobs1111 = d1111 ? d1111.total_active_jobs : 0;
+  // 合計卡片 — 從 by_week 累加（root 沒有 total_pv, 要 aggregate）
+  const sumField = (w, field) => (w?.by_week || []).reduce((s, x) => s + (x[field] || 0), 0);
+  const maxField = (w, field) => (w?.by_week || []).reduce((s, x) => Math.max(s, x[field] || 0), 0);
+  const pv104 = sumField(d104, 'total_pv');
+  const pv1111 = sumField(d1111, 'total_pv');
+  const app104 = sumField(d104, 'total_app');
+  const app1111 = sumField(d1111, 'total_app');
+  const jobs104 = maxField(d104, 'total_active_jobs');
+  const jobs1111 = maxField(d1111, 'total_active_jobs');
   const totalPv = pv104 + pv1111;
   const totalApp = app104 + app1111;
   const totalConv = totalPv ? (totalApp / totalPv * 100).toFixed(2) : 0;
@@ -495,8 +500,10 @@ function renderJobBanksSection() {
   document.getElementById('jb-app-104').textContent = d104 ? fmtNum(app104) : '—';
   document.getElementById('jb-app-1111').textContent = d1111 ? fmtNum(app1111) : '—';
   document.getElementById('jb-conv').textContent = totalConv + '%';
-  document.getElementById('jb-conv-104').textContent = d104 ? d104.avg_conversion_rate + '%' : '—';
-  document.getElementById('jb-conv-1111').textContent = d1111 ? d1111.avg_conversion_rate + '%' : '—';
+  const conv104 = pv104 ? (app104 / pv104 * 100).toFixed(2) : 0;
+  const conv1111 = pv1111 ? (app1111 / pv1111 * 100).toFixed(2) : 0;
+  document.getElementById('jb-conv-104').textContent = pv104 ? conv104 + '%' : '—';
+  document.getElementById('jb-conv-1111').textContent = pv1111 ? conv1111 + '%' : '—';
   document.getElementById('jb-jobs').textContent = fmtNum(jobs104 + jobs1111);
   document.getElementById('jb-jobs-104').textContent = d104 ? fmtNum(jobs104) : '—';
   document.getElementById('jb-jobs-1111').textContent = d1111 ? fmtNum(jobs1111) : '—';
@@ -1705,7 +1712,7 @@ function renderDeptTable() {
   // 排除 biz + course 都空白的殘缺列（Excel 「暫不列入計算」區塊 forward-fill 斷掉的殘留）
   data = data.filter(p => p.biz || p.course);
   // 排除假名/測試職缺（HR 待更新召募達成率 Excel 用的暫時 placeholder）
-  const HIDDEN_POSITION_PATTERNS = [/^aatt2/i, /^acc\(/i];
+  const HIDDEN_POSITION_PATTERNS = [/aatt2/i, /^acc\(/i];
   data = data.filter(p => !HIDDEN_POSITION_PATTERNS.some(rx => rx.test(p.position || '')));
   if (monthFilter) data = data.filter(p => String(p.month) === monthFilter);
   if (bizFilter) data = data.filter(p => p.biz === bizFilter);
@@ -1934,8 +1941,10 @@ function clearPosFilters() {
 }
 
 function renderPositionsTable() {
-  // 舊「招募職缺逐筆明細」表已合併到「部門流失與招募狀況」展開列；保留 stub 避免其他呼叫者出錯
-  if (!document.getElementById('positions-table')) return;
+  // 舊「招募職缺逐筆明細」表已完全下架（新版由 renderDeptTable 顯示）→ 直接清空避免殘留內容
+  const el = document.getElementById('positions-table');
+  if (el) el.innerHTML = '';
+  return;
   populatePosFilterOptions();
   let data = FILTERED.open_positions;
   if (JOB_TYPE_FILTER) data = data.filter(p => p.type === JOB_TYPE_FILTER);
@@ -2582,14 +2591,8 @@ function renderFunnelSection() {
   const sec = document.getElementById('section-funnel');
   if (!sec) return;
   if (!FUNNEL_DATA) { sec.classList.add('hidden'); return; }
-  // FB 資料若 leads/spend 全 0（Meta API 抓不到）→ 隱藏整個 FB 招募廣告刊登區塊
-  const byMonth = FUNNEL_DATA.by_month || [];
-  const totalLeads = byMonth.reduce((s, m) => s + (m.leads || 0), 0);
-  const totalSpend = byMonth.reduce((s, m) => s + (m.spend || 0), 0);
-  if (totalLeads === 0 && totalSpend === 0) {
-    sec.classList.add('hidden');
-    return;
-  }
+  // 即使 Meta API 抓不到（leads/spend 全 0）也維持顯示，
+  // 讓使用者能看到 FB 對比 104/1111 的欄位結構（等 API token 修好會自動顯示數字）
   sec.classList.remove('hidden');
 
   const view = computeFunnelView();
@@ -2607,19 +2610,34 @@ function renderFunnelSection() {
   }
   document.getElementById('funnel-period').textContent = periodTxt;
 
-  // 無 leads → 整段視為「無資料」（部門沒做 FB 刊登 / 期間沒有 campaign）
+  // Meta API 無資料時亮警示 banner
+  const apiWarn = document.getElementById('funnel-api-warning');
+  if ((s.fb_total_spend || 0) === 0 && (s.fb_total_leads || 0) === 0) {
+    if (apiWarn) apiWarn.classList.remove('hidden');
+  } else {
+    if (apiWarn) apiWarn.classList.add('hidden');
+  }
+
   const no收件數 = !(s.fb_total_leads > 0);
   document.getElementById('funnel-spend').textContent = fmtNum(Math.round(s.fb_total_spend || 0));
   document.getElementById('funnel-leads').textContent = fmtNum(s.fb_total_leads || 0);
-  document.getElementById('funnel-in-ats').textContent = no收件數 ? '-' : fmtNum(s.fb_total_in_ats || 0);
-  document.getElementById('funnel-invited').textContent = no收件數 ? '-' : fmtNum(s.fb_total_invited || 0);
+  const inAts = document.getElementById('funnel-in-ats');
+  if (inAts) inAts.textContent = no收件數 ? '-' : fmtNum(s.fb_total_in_ats || 0);
+  const invited = document.getElementById('funnel-invited');
+  if (invited) invited.textContent = no收件數 ? '-' : fmtNum(s.fb_total_invited || 0);
   document.getElementById('funnel-hired').textContent = s.ats_total_hired == null ? '-' : fmtNum(s.ats_total_hired);
-  document.getElementById('funnel-cpl').textContent = (s.fb_avg_cpl || 0).toFixed(1);
+  const cplEl = document.getElementById('funnel-cpl');
+  if (cplEl) cplEl.textContent = (s.fb_avg_cpl || 0).toFixed(1);
 
   const leadsToAts = (!no收件數 && s.fb_total_leads) ? (s.fb_total_in_ats / s.fb_total_leads * 100).toFixed(1) + '%' : '-';
   const inAtsToInv = (!no收件數 && s.fb_total_in_ats) ? (s.fb_total_invited / s.fb_total_in_ats * 100).toFixed(1) + '%' : '-';
-  document.getElementById('funnel-in-ats-rate').textContent = leadsToAts;
-  document.getElementById('funnel-invited-rate').textContent = inAtsToInv;
+  const rateEl = document.getElementById('funnel-in-ats-rate');
+  if (rateEl) rateEl.textContent = leadsToAts;
+  const invRateEl = document.getElementById('funnel-invited-rate');
+  if (invRateEl) invRateEl.textContent = inAtsToInv;
+  // 新版 4 卡佈局的合計轉換率 (Leads → 進招募管理系統)
+  const convEl = document.getElementById('funnel-conv-rate');
+  if (convEl) convEl.textContent = leadsToAts;
 
   // 部門有篩選但 by_job 沒對到 → 在區塊頂端顯示明確警示
   let noDataBanner = document.getElementById('funnel-nodata-banner');
